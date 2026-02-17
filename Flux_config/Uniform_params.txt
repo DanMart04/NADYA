@@ -1,0 +1,5 @@
+particles: e+
+fractions: 1.
+
+E_min: 10
+E_max: 10
