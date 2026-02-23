@@ -8,12 +8,14 @@ EventAction::EventAction(AnalysisManager* an, RunAction* r, const G4double eCrys
     // UPDATED detector mapping for NEW geometry
     // {HC Name, detID, Readable Name}
     detMap = {
-        {"TOFTopSD/EdepHits",       0, "TOFTop"},
-        {"TOFBottomSD/EdepHits",    1, "TOFBottom"},
-        {"VetoSD/EdepHits",         2, "Veto"},
-        {"CoordSD/EdepHits",        3, "FiberX"},
-        {"FiberSD/EdepHits",        5, "FiberY"},
-        {"CalorimeterSD/EdepHits",  6, "Calorimeter"},
+        {"Trigger1LowerSD/EdepHits", 0, "Trigger1Lower"},
+        {"Trigger1UpperSD/EdepHits", 1, "Trigger1Upper"},
+        {"VetoSD/EdepHits",          2, "Veto"},
+        {"CoordSD/EdepHits",         3, "FiberX"},
+        {"Trigger2LowerSD/EdepHits", 4, "Trigger2Lower"},
+        {"FiberSD/EdepHits",         5, "FiberY"},
+        {"CalorimeterSD/EdepHits",   6, "Calorimeter"},
+        {"Trigger2UpperSD/EdepHits", 7, "Trigger2Upper"},
     };
     HCIDs.assign(detMap.size(), -1);
 }
@@ -38,7 +40,11 @@ void EventAction::EndOfEventAction(const G4Event* evt) {
     nInteractions = WriteInteractions_(eventID);
     interBuf.clear();
 
-    // 3. Write hits from sensitive detectors (WITH COORDINATES!)
+    // 2b. Write all secondaries
+    WriteSecondaries_(eventID);
+    secBuf.clear();
+
+    // 3. Write hits from sensitive detectors
     nHits = WriteHitsFromSD_(evt, eventID);
 
     // 4. Write event summary
@@ -55,7 +61,8 @@ void EventAction::EndOfEventAction(const G4Event* evt) {
 
 void EventAction::WritePrimaries_(int eventID) {
     for (const auto& p : primBuf) {
-        analysisManager->FillPrimaryRow(eventID, p.name, p.E_MeV, p.dir, p.pos_mm);
+        analysisManager->FillPrimaryRow(eventID, p.name, p.E_MeV, p.dir);
+        analysisManager->FillPrimaryCsvRow(eventID, p.name, p.E_MeV, p.dir);
     }
 }
 
@@ -65,9 +72,20 @@ int EventAction::WriteInteractions_(int eventID) {
         // Save only critical interactions
         if (r.process == "compt" || r.process == "phot" || r.process == "conv") {
             analysisManager->FillInteractionRow(eventID, r.trackID, r.parentID,
-                                               r.process, r.volumeName, r.pos_mm, r.E_MeV);
+                                               r.process, r.volumeName, r.E_MeV);
             n++;
         }
+    }
+    return n;
+}
+
+int EventAction::WriteSecondaries_(int eventID) {
+    int n = 0;
+    for (const auto& s : secBuf) {
+        analysisManager->FillSecondaryCsvRow(eventID, s.secondaryTrackID, s.parentTrackID, s.parentPDG, s.parentName,
+                                             s.process, s.birthVolumeName, s.secondaryName, s.secondaryPDG,
+                                             s.E_MeV, s.dir0, s.t0_ns);
+        ++n;
     }
     return n;
 }
@@ -87,6 +105,14 @@ int EventAction::WriteHitsFromSD_(const G4Event* evt, int eventID) {
     }
 
     int nHitsTotal = 0;
+    G4double edepVeto_MeV = 0.0;
+    G4double edepTrig1Lower_MeV = 0.0;
+    G4double edepTrig1Upper_MeV = 0.0;
+    G4double edepTrig2Lower_MeV = 0.0;
+    G4double edepTrig2Upper_MeV = 0.0;
+    G4double edepFiberX_MeV = 0.0;
+    G4double edepFiberY_MeV = 0.0;
+    G4double edepCalo_MeV = 0.0;
 
     // Loop over all detectors
     for (size_t i = 0; i < detMap.size(); ++i) {
@@ -106,6 +132,15 @@ int EventAction::WriteHitsFromSD_(const G4Event* evt, int eventID) {
 
             double edep_MeV = h->edep / MeV;
 
+            if (detID == 2) edepVeto_MeV += edep_MeV;
+            else if (detID == 0) edepTrig1Lower_MeV += edep_MeV;
+            else if (detID == 1) edepTrig1Upper_MeV += edep_MeV;
+            else if (detID == 4) edepTrig2Lower_MeV += edep_MeV;
+            else if (detID == 7) edepTrig2Upper_MeV += edep_MeV;
+            else if (detID == 3) edepFiberX_MeV += edep_MeV;
+            else if (detID == 5) edepFiberY_MeV += edep_MeV;
+            else if (detID == 6) edepCalo_MeV += edep_MeV;
+
             // Apply thresholds
             if ((detID == 2) && edep_MeV <= eVetoThreshold) {  // Veto
                 continue;
@@ -114,17 +149,34 @@ int EventAction::WriteHitsFromSD_(const G4Event* evt, int eventID) {
                 continue;
             }
 
-            // Get coordinates from SDHit (LOCAL coordinates!)
-            G4ThreeVector pos_mm(h->x_loc_mm, h->y_loc_mm, h->z_loc_mm);
             G4double t_ns = h->t_ns;
             G4int copyNo = h->copyNo;
+            G4int trackID = h->trackID;
+            G4int parentTrackID = h->parentTrackID;
+            G4int particlePDG = h->particlePDG;
 
             // Get particle name from SDHit
             G4String particleName = h->particleName;
 
             // Write hit
             analysisManager->FillHitRow(eventID, detID, det_name, copyNo,
-                                       edep_MeV, pos_mm, t_ns, particleName);
+                                       edep_MeV, t_ns, particleName);
+
+            if (detID == 3 || detID == 5) {
+                analysisManager->FillFiberCsvRow(eventID, particleName, h->fiberPlane, h->fiberModule,
+                                                 h->fiberLayer, h->fiberRow, copyNo, edep_MeV, t_ns);
+            }
+            G4int crystalIx = -1;
+            G4int crystalIy = -1;
+            if (detID == 6) {
+                crystalIx = copyNo / 10;
+                crystalIy = copyNo % 10;
+                analysisManager->FillCrystalCsvRow(eventID, copyNo, crystalIx, crystalIy,
+                                                   edep_MeV, t_ns, particleName);
+            }
+            analysisManager->FillHitCsvRow(eventID, trackID, parentTrackID, particleName, particlePDG, detID,
+                                           det_name, copyNo, edep_MeV, h->fiberPlane, h->fiberModule,
+                                           h->fiberLayer, h->fiberRow, crystalIx, crystalIy);
 
             nHitsTotal++;
 
@@ -135,6 +187,10 @@ int EventAction::WriteHitsFromSD_(const G4Event* evt, int eventID) {
             }
         }
     }
+
+    analysisManager->FillEdepCsvRow(eventID, edepVeto_MeV, edepTrig1Lower_MeV, edepTrig1Upper_MeV,
+                                    edepTrig2Lower_MeV, edepTrig2Upper_MeV, edepFiberX_MeV,
+                                    edepFiberY_MeV, edepCalo_MeV);
 
     return nHitsTotal;
 }

@@ -30,6 +30,13 @@ public:
     G4double t_ns = 0.0;
     G4int copyNo = 0;
     G4String particleName = "unknown";  // НОВОЕ: имя частицы
+    G4int particlePDG = 0;
+    G4int trackID = -1;
+    G4int parentTrackID = -1;
+    G4int fiberModule = -1;
+    G4int fiberLayer = -1;
+    G4int fiberRow = -1;
+    G4String fiberPlane = "";
 
     void AddEdep(G4double);
     void UpdateTmin(G4double t);

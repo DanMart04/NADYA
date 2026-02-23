@@ -6,6 +6,7 @@
 #include <CLHEP/Units/SystemOfUnits.h>
 #include <globals.hh>
 #include <Sizes.hh>
+#include <fstream>
 
 class AnalysisManager {
 public:
@@ -22,19 +23,38 @@ public:
 
     // Primary particles
     void FillPrimaryRow(G4int eventID, const G4String &primaryName,
-                        G4double E_MeV, const G4ThreeVector &dir,
-                        const G4ThreeVector &pos_mm);
+                        G4double E_MeV, const G4ThreeVector &dir);
 
-    // Hits with coordinates (MAIN DATA!)
+    // Hits (MAIN DATA!)
     void FillHitRow(G4int eventID, G4int detID, const G4String &detName,
                     G4int copyNo, G4double edep_MeV,
-                    const G4ThreeVector &pos_mm, G4double t_ns,
-                    const G4String &particleName);
+                    G4double t_ns, const G4String &particleName);
 
     // Interactions (simplified - only critical)
     void FillInteractionRow(G4int eventID, G4int trackID, G4int parentID,
-                           const G4String &process, const G4String &volumeName,
-                           const G4ThreeVector &pos_mm, G4double E_MeV);
+                           const G4String &process, const G4String &volumeName, G4double E_MeV);
+
+    // CSV outputs for post-processing
+    void FillPrimaryCsvRow(G4int eventID, const G4String &particleName, G4double E_MeV,
+                           const G4ThreeVector &dir);
+    void FillFiberCsvRow(G4int eventID, const G4String &particleName, const G4String &plane,
+                         G4int moduleID, G4int layerID, G4int rowID, G4int copyNo,
+                         G4double edep_MeV, G4double t_ns);
+    void FillHitCsvRow(G4int eventID, G4int trackID, G4int parentTrackID,
+                       const G4String &particleName, G4int particlePDG, G4int detID,
+                       const G4String &detName, G4int copyNo, G4double edep_MeV,
+                       const G4String &plane, G4int moduleID, G4int layerID,
+                       G4int rowID, G4int crystalIx, G4int crystalIy);
+    void FillSecondaryCsvRow(G4int eventID, G4int secondaryTrackID, G4int parentTrackID, G4int parentPDG,
+                             const G4String &parentName, const G4String &process,
+                             const G4String &birthVolumeName, const G4String &secondaryName,
+                             G4int secondaryPDG, G4double E_MeV, const G4ThreeVector &dir0, G4double t0_ns);
+    void FillCrystalCsvRow(G4int eventID, G4int crystalCopyNo, G4int crystalIx, G4int crystalIy,
+                           G4double edep_MeV, G4double t_ns, const G4String &particleName);
+    void FillEdepCsvRow(G4int eventID, G4double edepVeto_MeV, G4double edepTrig1Lower_MeV,
+                        G4double edepTrig1Upper_MeV, G4double edepTrig2Lower_MeV,
+                        G4double edepTrig2Upper_MeV, G4double edepFiberX_MeV,
+                        G4double edepFiberY_MeV, G4double edepCalo_MeV);
 
 private:
     G4int eventNT{-1};
@@ -43,6 +63,13 @@ private:
     G4int interactionsNT{-1};   // Simplified
 
     void Book();
+
+    std::ofstream primaryCsv;
+    std::ofstream fiberCsv;
+    std::ofstream hitsCsv;
+    std::ofstream secondaryCsv;
+    std::ofstream crystalCsv;
+    std::ofstream edepCsv;
 };
 
 #endif //ANALYSISMANAGER_HH

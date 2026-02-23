@@ -1,4 +1,5 @@
 #include "AnalysisManager.hh"
+#include <iomanip>
 
 using namespace Sizes;
 
@@ -36,24 +37,19 @@ void AnalysisManager::Book() {
     analysisManager->CreateNtupleDColumn("dir_x");
     analysisManager->CreateNtupleDColumn("dir_y");
     analysisManager->CreateNtupleDColumn("dir_z");
-    analysisManager->CreateNtupleDColumn("pos_x_mm");
-    analysisManager->CreateNtupleDColumn("pos_y_mm");
-    analysisManager->CreateNtupleDColumn("pos_z_mm");
     analysisManager->FinishNtuple(primaryNT);
 
     // ═══════════════════════════════════════════════════════
-    // 3. HITS - detector hits WITH COORDINATES (MAIN!)
+    // 3. HITS - detector hits (MAIN)
     // ═══════════════════════════════════════════════════════
-    // detID: 0=TOFTop, 1=TOFBottom, 2=Veto, 3=Coord, 4=FiberX, 5=FiberY, 6=Calo
-    hitsNT = analysisManager->CreateNtuple("hits", "detector hits with positions");
+    // detID: 0=Trigger1Lower, 1=Trigger1Upper, 2=Veto, 3=FiberX,
+    //        4=Trigger2Lower, 5=FiberY, 6=Calo, 7=Trigger2Upper
+    hitsNT = analysisManager->CreateNtuple("hits", "detector hits");
     analysisManager->CreateNtupleIColumn("eventID");
     analysisManager->CreateNtupleIColumn("detID");
     analysisManager->CreateNtupleSColumn("det_name");
     analysisManager->CreateNtupleIColumn("copyNo");
     analysisManager->CreateNtupleDColumn("edep_MeV");
-    analysisManager->CreateNtupleDColumn("x_mm");       // Local X
-    analysisManager->CreateNtupleDColumn("y_mm");       // Local Y
-    analysisManager->CreateNtupleDColumn("z_mm");       // Local Z
     analysisManager->CreateNtupleDColumn("t_ns");
     analysisManager->CreateNtupleSColumn("particle");
     analysisManager->FinishNtuple(hitsNT);
@@ -67,21 +63,39 @@ void AnalysisManager::Book() {
     analysisManager->CreateNtupleIColumn("parentID");
     analysisManager->CreateNtupleSColumn("process");
     analysisManager->CreateNtupleSColumn("volume");
-    analysisManager->CreateNtupleDColumn("x_mm");
-    analysisManager->CreateNtupleDColumn("y_mm");
-    analysisManager->CreateNtupleDColumn("z_mm");
     analysisManager->CreateNtupleDColumn("E_MeV");      // Secondary energy
     analysisManager->FinishNtuple(interactionsNT);
 }
 
 void AnalysisManager::Open() {
     G4AnalysisManager::Instance()->OpenFile(fileName);
+
+    primaryCsv.open("events_primary.csv", std::ios::out | std::ios::trunc);
+    fiberCsv.open("events_fibers.csv", std::ios::out | std::ios::trunc);
+    hitsCsv.open("events_hits.csv", std::ios::out | std::ios::trunc);
+    secondaryCsv.open("events_secondaries.csv", std::ios::out | std::ios::trunc);
+    crystalCsv.open("events_crystals.csv", std::ios::out | std::ios::trunc);
+    edepCsv.open("events_edep.csv", std::ios::out | std::ios::trunc);
+
+    primaryCsv << "event_id,particle,E_MeV,dir_x,dir_y,dir_z\n";
+    fiberCsv << "event_id,particle,plane,module_id,layer_id,row_id,copy_no,edep_MeV,t_ns\n";
+    hitsCsv << "event_id,track_id,parent_track_id,is_secondary,particle,particle_pdg,det_id,det_name,copy_no,edep_MeV,plane,module_id,layer_id,row_id,crystal_ix,crystal_iy\n";
+    secondaryCsv << "event_id,secondary_track_id,parent_track_id,parent_pdg,parent_name,process,birth_volume,secondary_name,secondary_pdg,E_MeV,dir0_x,dir0_y,dir0_z,t0_ns\n";
+    crystalCsv << "event_id,crystal_copy_no,crystal_ix,crystal_iy,edep_MeV,t_ns,particle\n";
+    edepCsv << "event_id,edep_veto_MeV,edep_trigger1_lower_MeV,edep_trigger1_upper_MeV,edep_trigger2_lower_MeV,edep_trigger2_upper_MeV,edep_fiber_x_MeV,edep_fiber_y_MeV,edep_calo_MeV,edep_total_MeV\n";
 }
 
 void AnalysisManager::Close() {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
     analysisManager->Write();
     analysisManager->CloseFile();
+
+    if (primaryCsv.is_open()) primaryCsv.close();
+    if (fiberCsv.is_open()) fiberCsv.close();
+    if (hitsCsv.is_open()) hitsCsv.close();
+    if (secondaryCsv.is_open()) secondaryCsv.close();
+    if (crystalCsv.is_open()) crystalCsv.close();
+    if (edepCsv.is_open()) edepCsv.close();
 }
 
 void AnalysisManager::FillEventRow(G4int eventID, G4int nPrimaries, G4int nHits) {
@@ -93,8 +107,7 @@ void AnalysisManager::FillEventRow(G4int eventID, G4int nPrimaries, G4int nHits)
 }
 
 void AnalysisManager::FillPrimaryRow(G4int eventID, const G4String &primaryName,
-                                     G4double E_MeV, const G4ThreeVector &dir,
-                                     const G4ThreeVector &pos_mm) {
+                                     G4double E_MeV, const G4ThreeVector &dir) {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
     analysisManager->FillNtupleIColumn(primaryNT, 0, eventID);
     analysisManager->FillNtupleSColumn(primaryNT, 1, primaryName);
@@ -102,42 +115,127 @@ void AnalysisManager::FillPrimaryRow(G4int eventID, const G4String &primaryName,
     analysisManager->FillNtupleDColumn(primaryNT, 3, dir.x());
     analysisManager->FillNtupleDColumn(primaryNT, 4, dir.y());
     analysisManager->FillNtupleDColumn(primaryNT, 5, dir.z());
-    analysisManager->FillNtupleDColumn(primaryNT, 6, pos_mm.x());
-    analysisManager->FillNtupleDColumn(primaryNT, 7, pos_mm.y());
-    analysisManager->FillNtupleDColumn(primaryNT, 8, pos_mm.z());
     analysisManager->AddNtupleRow(primaryNT);
 }
 
 void AnalysisManager::FillHitRow(G4int eventID, G4int detID, const G4String &detName,
                                  G4int copyNo, G4double edep_MeV,
-                                 const G4ThreeVector &pos_mm, G4double t_ns,
-                                 const G4String &particleName) {
+                                 G4double t_ns, const G4String &particleName) {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
     analysisManager->FillNtupleIColumn(hitsNT, 0, eventID);
     analysisManager->FillNtupleIColumn(hitsNT, 1, detID);
     analysisManager->FillNtupleSColumn(hitsNT, 2, detName);
     analysisManager->FillNtupleIColumn(hitsNT, 3, copyNo);
     analysisManager->FillNtupleDColumn(hitsNT, 4, edep_MeV);
-    analysisManager->FillNtupleDColumn(hitsNT, 5, pos_mm.x());
-    analysisManager->FillNtupleDColumn(hitsNT, 6, pos_mm.y());
-    analysisManager->FillNtupleDColumn(hitsNT, 7, pos_mm.z());
-    analysisManager->FillNtupleDColumn(hitsNT, 8, t_ns);
-    analysisManager->FillNtupleSColumn(hitsNT, 9, particleName);
+    analysisManager->FillNtupleDColumn(hitsNT, 5, t_ns);
+    analysisManager->FillNtupleSColumn(hitsNT, 6, particleName);
     analysisManager->AddNtupleRow(hitsNT);
 }
 
 void AnalysisManager::FillInteractionRow(G4int eventID, G4int trackID, G4int parentID,
                                         const G4String &process, const G4String &volumeName,
-                                        const G4ThreeVector &pos_mm, G4double E_MeV) {
+                                        G4double E_MeV) {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
     analysisManager->FillNtupleIColumn(interactionsNT, 0, eventID);
     analysisManager->FillNtupleIColumn(interactionsNT, 1, trackID);
     analysisManager->FillNtupleIColumn(interactionsNT, 2, parentID);
     analysisManager->FillNtupleSColumn(interactionsNT, 3, process);
     analysisManager->FillNtupleSColumn(interactionsNT, 4, volumeName);
-    analysisManager->FillNtupleDColumn(interactionsNT, 5, pos_mm.x());
-    analysisManager->FillNtupleDColumn(interactionsNT, 6, pos_mm.y());
-    analysisManager->FillNtupleDColumn(interactionsNT, 7, pos_mm.z());
-    analysisManager->FillNtupleDColumn(interactionsNT, 8, E_MeV);
+    analysisManager->FillNtupleDColumn(interactionsNT, 5, E_MeV);
     analysisManager->AddNtupleRow(interactionsNT);
+}
+
+void AnalysisManager::FillPrimaryCsvRow(G4int eventID, const G4String &particleName, G4double E_MeV,
+                                        const G4ThreeVector &dir) {
+    if (!primaryCsv.is_open()) return;
+    primaryCsv << eventID << ","
+               << particleName << ","
+               << std::setprecision(10) << E_MeV << ","
+               << dir.x() << "," << dir.y() << "," << dir.z() << "\n";
+}
+
+void AnalysisManager::FillFiberCsvRow(G4int eventID, const G4String &particleName, const G4String &plane,
+                                      G4int moduleID, G4int layerID, G4int rowID, G4int copyNo,
+                                      G4double edep_MeV, G4double t_ns) {
+    if (!fiberCsv.is_open()) return;
+    fiberCsv << eventID << ","
+             << particleName << ","
+             << plane << ","
+             << moduleID << ","
+             << layerID << ","
+             << rowID << ","
+             << copyNo << ","
+             << std::setprecision(10) << edep_MeV << ","
+             << t_ns << "\n";
+}
+
+void AnalysisManager::FillHitCsvRow(G4int eventID, G4int trackID, G4int parentTrackID,
+                                    const G4String &particleName, G4int particlePDG, G4int detID,
+                                    const G4String &detName, G4int copyNo, G4double edep_MeV,
+                                    const G4String &plane, G4int moduleID, G4int layerID, G4int rowID,
+                                    G4int crystalIx, G4int crystalIy) {
+    if (!hitsCsv.is_open()) return;
+    const G4int isSecondary = parentTrackID > 0 ? 1 : 0;
+    hitsCsv << eventID << ","
+            << trackID << ","
+            << parentTrackID << ","
+            << isSecondary << ","
+            << particleName << ","
+            << particlePDG << ","
+            << detID << ","
+            << detName << ","
+            << copyNo << ","
+            << std::setprecision(10) << edep_MeV << ","
+            << plane << "," << moduleID << "," << layerID << "," << rowID << ","
+            << crystalIx << ","
+            << crystalIy << "\n";
+}
+
+void AnalysisManager::FillSecondaryCsvRow(G4int eventID, G4int secondaryTrackID, G4int parentTrackID, G4int parentPDG,
+                                          const G4String &parentName, const G4String &process,
+                                          const G4String &birthVolumeName, const G4String &secondaryName,
+                                          G4int secondaryPDG, G4double E_MeV, const G4ThreeVector &dir0, G4double t0_ns) {
+    if (!secondaryCsv.is_open()) return;
+    secondaryCsv << eventID << ","
+                 << secondaryTrackID << ","
+                 << parentTrackID << ","
+                 << parentPDG << ","
+                 << parentName << ","
+                 << process << ","
+                 << birthVolumeName << ","
+                 << secondaryName << ","
+                 << secondaryPDG << ","
+                 << std::setprecision(10) << E_MeV << ","
+                 << dir0.x() << "," << dir0.y() << "," << dir0.z() << "," << t0_ns << "\n";
+}
+
+void AnalysisManager::FillCrystalCsvRow(G4int eventID, G4int crystalCopyNo, G4int crystalIx, G4int crystalIy,
+                                        G4double edep_MeV, G4double t_ns, const G4String &particleName) {
+    if (!crystalCsv.is_open()) return;
+    crystalCsv << eventID << ","
+               << crystalCopyNo << ","
+               << crystalIx << ","
+               << crystalIy << ","
+               << std::setprecision(10) << edep_MeV << ","
+               << t_ns << "," << particleName << "\n";
+}
+
+void AnalysisManager::FillEdepCsvRow(G4int eventID, G4double edepVeto_MeV, G4double edepTrig1Lower_MeV,
+                                     G4double edepTrig1Upper_MeV, G4double edepTrig2Lower_MeV,
+                                     G4double edepTrig2Upper_MeV, G4double edepFiberX_MeV,
+                                     G4double edepFiberY_MeV, G4double edepCalo_MeV) {
+    if (!edepCsv.is_open()) return;
+    const G4double total = edepVeto_MeV + edepTrig1Lower_MeV + edepTrig1Upper_MeV + edepTrig2Lower_MeV +
+                           edepTrig2Upper_MeV + edepFiberX_MeV + edepFiberY_MeV + edepCalo_MeV;
+    edepCsv << eventID << ","
+            << std::setprecision(10)
+            << edepVeto_MeV << ","
+            << edepTrig1Lower_MeV << ","
+            << edepTrig1Upper_MeV << ","
+            << edepTrig2Lower_MeV << ","
+            << edepTrig2Upper_MeV << ","
+            << edepFiberX_MeV << ","
+            << edepFiberY_MeV << ","
+            << edepCalo_MeV << ","
+            << total << "\n";
 }

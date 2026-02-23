@@ -47,7 +47,7 @@ private:
     G4String fluxDirection;
     ParticleInfo pInfo{};
 
-    Flux *flux;
+    Flux *flux = nullptr;
 
     void GenerateOnSphere(G4ThreeVector &pos, G4ThreeVector &dir) const;
 };

@@ -5,7 +5,7 @@
 
 PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String &fluxType)
     : particleGun(new G4ParticleGun(1)),
-      center(G4ThreeVector(0, 0, 0)),
+      center(G4ThreeVector(0, 0, Sizes::CubeInner::centerZ())),
       detectorSize(G4ThreeVector(Sizes::CubeInner::halfX * 2.0, Sizes::CubeInner::halfY * 2.0, Sizes::CubeInner::height())),
       fluxDirection(std::move(fDir)) {
     const G4ThreeVector tempVec = detectorSize / 2.;
@@ -42,6 +42,7 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String &fl
 
 PrimaryGeneratorAction::~PrimaryGeneratorAction() {
     delete particleGun;
+    delete flux;
 }
 
 
@@ -75,17 +76,16 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *evt) {
     G4ThreeVector x, v;
     if (fluxDirection == "vertical") {
         v = G4ThreeVector(0., 0., -1.);
-        const G4double x_ = (G4UniformRand() - 0.5) * detectorSize.x();
-        const G4double y_ = (G4UniformRand() - 0.5) * detectorSize.y();
-        const G4double z_ = radius;
-        x = G4ThreeVector(x_, y_, z_);
-        x = G4ThreeVector(0, 0, detectorSize.z() / 2. + 2 * cm);
+        const G4double x_ = (G4UniformRand() - 0.5) * detectorSize.x() / 2 ;
+        const G4double y_ = (G4UniformRand() - 0.5) * detectorSize.y() / 2;
+        const G4double z_ = center.z() + radius;
+        x = G4ThreeVector(center.x() + x_, center.y() + y_, z_);
     } else if (fluxDirection == "horizontal") {
         v = G4ThreeVector(-1., 0., 0.);
-        const G4double x_ = radius;
+        const G4double x_ = center.x() + radius;
         const G4double y_ = (G4UniformRand() - 0.5) * detectorSize.y();
         const G4double z_ = (G4UniformRand() - 0.5) * detectorSize.z();
-        x = G4ThreeVector(x_, y_, z_);
+        x = G4ThreeVector(x_, center.y() + y_, center.z() + z_);
     } else {
         GenerateOnSphere(x, v);
     }

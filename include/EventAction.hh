@@ -43,10 +43,26 @@ struct InteractionRec {
     double E_MeV = 0.0;
 };
 
+struct SecondaryRec {
+    int secondaryTrackID = -1;
+    int parentTrackID = -1;
+    int parentPDG = 0;
+    G4String parentName;
+    G4String process;
+    G4String birthVolumeName;
+    G4String secondaryName;
+    int secondaryPDG = 0;
+    G4ThreeVector birthPos_mm;
+    G4ThreeVector dir0;
+    double E_MeV = 0.0;
+    double t0_ns = 0.0;
+};
+
 class EventAction : public G4UserEventAction {
 public:
     std::vector<PrimaryRec> primBuf;
     std::vector<InteractionRec> interBuf;
+    std::vector<SecondaryRec> secBuf;
 
     EventAction(AnalysisManager *, RunAction *, G4double, G4double, G4bool);
     ~EventAction() override = default;
@@ -57,6 +73,7 @@ public:
 private:
     void WritePrimaries_(int eventID);
     int WriteInteractions_(int eventID);
+    int WriteSecondaries_(int eventID);
     int WriteHitsFromSD_(const G4Event *evt, int eventID);
 
     inline void MarkCrystal() { hasCrystal = true; }
@@ -65,7 +82,8 @@ private:
     AnalysisManager *analysisManager = nullptr;
 
     // Detector mapping: {HC Name, detID, Readable Name}
-    // detID: 0=TOFTop, 1=TOFBottom, 2=Veto(all), 3=Coord, 4=FiberX, 5=FiberY, 6=Calo
+    // detID: 0=Trigger1Lower, 1=Trigger1Upper, 2=Veto, 3=FiberX,
+    //        4=Trigger2Lower, 5=FiberY, 6=Calorimeter, 7=Trigger2Upper
     std::vector<std::tuple<G4String, int, G4String>> detMap;
     std::vector<int> HCIDs;
 
