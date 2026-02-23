@@ -19,6 +19,7 @@
 #include <G4VPhysicalVolume.hh>
 #include <G4AffineTransform.hh>
 #include <G4ios.hh>
+#include <cstdint>
 
 #include "SDHit.hh"
 
@@ -36,13 +37,14 @@ public:
     const G4String &GetDetName() const { return detName; }
 
 private:
-    SDHit *FindOrCreateHit(G4int volumeID);
+    SDHit *FindOrCreateHit(std::uint64_t hitKey, G4int volumeID);
+    static std::uint64_t BuildHitKey(const G4VTouchable *touch, G4int trackID);
 
     SDHitCollection *hits = nullptr;
     SDHitCollection *optHC  = nullptr;
     G4int HCID = -1;
 
-    std::unordered_map<int, int> indexByVol;
+    std::unordered_map<std::uint64_t, int> indexByVol;
 
     G4int detID = -1;
     G4String detName;

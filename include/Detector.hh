@@ -36,8 +36,10 @@ public:
     void Construct();
 
     // Getters for sensitive volumes
-    [[nodiscard]] G4LogicalVolume* GetTOFTopLV() const { return tofTopLV; }
-    [[nodiscard]] G4LogicalVolume* GetTOFBottomLV() const { return tofBottomLV; }
+    [[nodiscard]] G4LogicalVolume* GetTrigger1LowerLV() const { return trigger1LowerLV; }
+    [[nodiscard]] G4LogicalVolume* GetTrigger1UpperLV() const { return trigger1UpperLV; }
+    [[nodiscard]] G4LogicalVolume* GetTrigger2LowerLV() const { return trigger2LowerLV; }
+    [[nodiscard]] G4LogicalVolume* GetTrigger2UpperLV() const { return trigger2UpperLV; }
     [[nodiscard]] G4LogicalVolume* GetVetoLV() const { return vetoLV; }
     [[nodiscard]] G4LogicalVolume* GetCoordDetectorLV() const { return coordDetectorLV; }
     [[nodiscard]] G4LogicalVolume* GetCopperPlateLV() const { return copperPlateLV; }
@@ -57,8 +59,10 @@ private:
     G4Material* calorimeterMat{};
 
     // Logical volumes (sensitive)
-    G4LogicalVolume* tofTopLV{};
-    G4LogicalVolume* tofBottomLV{};
+    G4LogicalVolume* trigger1LowerLV{};
+    G4LogicalVolume* trigger1UpperLV{};
+    G4LogicalVolume* trigger2LowerLV{};
+    G4LogicalVolume* trigger2UpperLV{};
     G4LogicalVolume* vetoLV{};
     G4LogicalVolume* coordDetectorLV{};
     G4LogicalVolume* copperPlateLV{};

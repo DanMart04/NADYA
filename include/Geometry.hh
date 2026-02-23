@@ -35,8 +35,10 @@ private:
     Detector* detector{};
 
     // Sensitive LVs
-    G4LogicalVolume* tofTopLV{};
-    G4LogicalVolume* tofBottomLV{};
+    G4LogicalVolume* trigger1LowerLV{};
+    G4LogicalVolume* trigger1UpperLV{};
+    G4LogicalVolume* trigger2LowerLV{};
+    G4LogicalVolume* trigger2UpperLV{};
     G4LogicalVolume* vetoLV{};
     G4LogicalVolume* coordDetectorLV{};
     G4LogicalVolume* copperPlateLV{};

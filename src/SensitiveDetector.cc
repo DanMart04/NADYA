@@ -26,7 +26,8 @@ void SensitiveDetector::Initialize(G4HCofThisEvent *hce) {
 }
 
 G4bool SensitiveDetector::ProcessHits(G4Step *step, G4TouchableHistory *) {
-    auto pd = step->GetTrack()->GetDefinition();
+    auto *track = step->GetTrack();
+    auto pd = track->GetDefinition();
 
     if (isLED and pd == G4OpticalPhoton::OpticalPhotonDefinition()) {
         if (optHC && step->GetPostStepPoint()->GetStepStatus() == fGeomBoundary) {
@@ -57,6 +58,7 @@ G4bool SensitiveDetector::ProcessHits(G4Step *step, G4TouchableHistory *) {
 
     const G4VTouchable *touch = step->GetPreStepPoint()->GetTouchable();
     const int volumeID = touch->GetVolume()->GetCopyNo();
+    const std::uint64_t hitKey = BuildHitKey(touch, track->GetTrackID());
 
     const G4double t = step->GetPreStepPoint()->GetGlobalTime();
 
@@ -64,11 +66,11 @@ G4bool SensitiveDetector::ProcessHits(G4Step *step, G4TouchableHistory *) {
     auto* prePoint = step->GetPreStepPoint();
     G4ThreeVector globalPos = prePoint->GetPosition();
     const G4AffineTransform transformation = touch->GetHistory()->GetTopTransform();
-    G4ThreeVector localPos = transformation.TransformPoint(globalPos);
+    G4ThreeVector localPos = transformation.Inverse().TransformPoint(globalPos);
 
     G4String particleName = pd->GetParticleName();
 
-    SDHit *hit = FindOrCreateHit(volumeID);
+    SDHit *hit = FindOrCreateHit(hitKey, volumeID);
     hit->AddEdep(edep);
     hit->UpdateTmin(t);
 
@@ -79,18 +81,58 @@ G4bool SensitiveDetector::ProcessHits(G4Step *step, G4TouchableHistory *) {
     hit->t_ns = t / ns;
     hit->copyNo = volumeID;
     hit->particleName = particleName;
+    hit->particlePDG = pd->GetPDGEncoding();
+    hit->trackID = track->GetTrackID();
+    hit->parentTrackID = track->GetParentID();
+
+    if (detID == 3 || detID == 5) {
+        const int raw = (detID == 5) ? (volumeID - 50000) : volumeID;
+        if (raw >= 0) {
+            hit->fiberLayer = raw / 1000;
+            hit->fiberRow = raw % 1000;
+        }
+        hit->fiberPlane = (detID == 3) ? "X" : "Y";
+
+        const int depth = touch->GetHistoryDepth();
+        for (int level = 0; level <= depth; ++level) {
+            const auto *vol = touch->GetVolume(level);
+            if (!vol) continue;
+            if (vol->GetName() == "FiberModulePV") {
+                hit->fiberModule = touch->GetCopyNumber(level);
+                break;
+            }
+        }
+    }
 
     return true;
 }
 
-SDHit *SensitiveDetector::FindOrCreateHit(G4int volumeID) {
-    auto it = indexByVol.find(volumeID);
+std::uint64_t SensitiveDetector::BuildHitKey(const G4VTouchable *touch, G4int trackID) {
+    std::uint64_t key = 1469598103934665603ull;
+    constexpr std::uint64_t prime = 1099511628211ull;
+    const int depth = touch->GetHistoryDepth();
+    for (int level = 0; level <= depth; ++level) {
+        const auto *vol = touch->GetVolume(level);
+        const std::uint64_t copyNo = static_cast<std::uint64_t>(touch->GetCopyNumber(level));
+        const std::uint64_t volPtr = reinterpret_cast<std::uintptr_t>(vol);
+        key ^= copyNo + 0x9e3779b97f4a7c15ull + (key << 6) + (key >> 2);
+        key *= prime;
+        key ^= volPtr + 0x9e3779b97f4a7c15ull + (key << 6) + (key >> 2);
+        key *= prime;
+    }
+    key ^= static_cast<std::uint64_t>(trackID) + 0x9e3779b97f4a7c15ull + (key << 6) + (key >> 2);
+    key *= prime;
+    return key;
+}
+
+SDHit *SensitiveDetector::FindOrCreateHit(std::uint64_t hitKey, G4int volumeID) {
+    auto it = indexByVol.find(hitKey);
     if (it != indexByVol.end()) {
         return (*hits)[it->second];
     }
 
     auto *h = new SDHit(volumeID);
     int idx = hits->insert(h) - 1;
-    indexByVol.emplace(volumeID, idx);
+    indexByVol.emplace(hitKey, idx);
     return h;
 }

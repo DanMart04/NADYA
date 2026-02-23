@@ -97,40 +97,58 @@ void Detector::ConstructVeto() {
 void Detector::ConstructTOF() {
     const G4bool checkOverlaps = true;
 
-    // Нижняя панель: 5 полос вдоль Y (сегментация по X)
-    auto* stripBottomSolid = new G4Box("TOFBottomStripSolid",
-                                       TOF::stripWidth / 2.0,
-                                       TOF::halfY,
-                                       TOF::panelThickness / 2.0);
-    tofBottomLV = new G4LogicalVolume(stripBottomSolid, tofMat, "TOFBottomStripLV");
-    tofBottomLV->SetVisAttributes(visTOF);
+    // Lower layer in a pair: strips run along Y (segmentation in X).
+    auto* xStripSolid = new G4Box("TriggerXStripSolid",
+                                  Trigger::stripWidth / 2.0,
+                                  Trigger::halfY,
+                                  Trigger::panelThickness / 2.0);
+    // Upper layer in a pair: strips run along X (segmentation in Y).
+    auto* yStripSolid = new G4Box("TriggerYStripSolid",
+                                  Trigger::halfX,
+                                  Trigger::stripWidth / 2.0,
+                                  Trigger::panelThickness / 2.0);
 
-    for (G4int i = 0; i < TOF::segmentCount; ++i) {
-        const G4double x = -TOF::halfX + (i + 0.5) * TOF::stripWidth;
+    trigger1LowerLV = new G4LogicalVolume(xStripSolid, tofMat, "Trigger1LowerStripLV");
+    trigger1UpperLV = new G4LogicalVolume(yStripSolid, tofMat, "Trigger1UpperStripLV");
+    trigger2LowerLV = new G4LogicalVolume(xStripSolid, tofMat, "Trigger2LowerStripLV");
+    trigger2UpperLV = new G4LogicalVolume(yStripSolid, tofMat, "Trigger2UpperStripLV");
+    trigger1LowerLV->SetVisAttributes(visTOF);
+    trigger1UpperLV->SetVisAttributes(visTOF);
+    trigger2LowerLV->SetVisAttributes(visTOF);
+    trigger2UpperLV->SetVisAttributes(visTOF);
+
+    for (G4int i = 0; i < Trigger::segmentCount; ++i) {
+        const G4double x = -Trigger::halfX + (i + 0.5) * Trigger::stripWidth;
+        const G4double y = -Trigger::halfY + (i + 0.5) * Trigger::stripWidth;
+
         new G4PVPlacement(nullptr,
-                          G4ThreeVector(x, 0.0, ZInInstrument(TOFBottom::centerZ())),
-                          tofBottomLV,
-                          "TOFBottomStripPV",
+                          G4ThreeVector(x, 0.0, ZInInstrument(Trigger1Lower::centerZ())),
+                          trigger1LowerLV,
+                          "Trigger1LowerStripPV",
                           cubeOuterLV,
                           false,
                           i,
                           checkOverlaps);
-    }
-
-    // Верхняя панель: 5 полос вдоль X (сегментация по Y)
-    auto* stripTopSolid = new G4Box("TOFTopStripSolid",
-                                    TOF::halfX,
-                                    TOF::stripWidth / 2.0,
-                                    TOF::panelThickness / 2.0);
-    tofTopLV = new G4LogicalVolume(stripTopSolid, tofMat, "TOFTopStripLV");
-    tofTopLV->SetVisAttributes(visTOF);
-
-    for (G4int i = 0; i < TOF::segmentCount; ++i) {
-        const G4double y = -TOF::halfY + (i + 0.5) * TOF::stripWidth;
         new G4PVPlacement(nullptr,
-                          G4ThreeVector(0.0, y, ZInInstrument(TOFTop::centerZ())),
-                          tofTopLV,
-                          "TOFTopStripPV",
+                          G4ThreeVector(0.0, y, ZInInstrument(Trigger1Upper::centerZ())),
+                          trigger1UpperLV,
+                          "Trigger1UpperStripPV",
+                          cubeOuterLV,
+                          false,
+                          i,
+                          checkOverlaps);
+        new G4PVPlacement(nullptr,
+                          G4ThreeVector(x, 0.0, ZInInstrument(Trigger2Lower::centerZ())),
+                          trigger2LowerLV,
+                          "Trigger2LowerStripPV",
+                          cubeOuterLV,
+                          false,
+                          i,
+                          checkOverlaps);
+        new G4PVPlacement(nullptr,
+                          G4ThreeVector(0.0, y, ZInInstrument(Trigger2Upper::centerZ())),
+                          trigger2UpperLV,
+                          "Trigger2UpperStripPV",
                           cubeOuterLV,
                           false,
                           i,

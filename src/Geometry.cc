@@ -29,8 +29,10 @@ G4VPhysicalVolume* Geometry::Construct() {
     detector->Construct();
 
     // Sensitive
-    tofTopLV        = detector->GetTOFTopLV();
-    tofBottomLV     = detector->GetTOFBottomLV();
+    trigger1LowerLV = detector->GetTrigger1LowerLV();
+    trigger1UpperLV = detector->GetTrigger1UpperLV();
+    trigger2LowerLV = detector->GetTrigger2LowerLV();
+    trigger2UpperLV = detector->GetTrigger2UpperLV();
     vetoLV          = detector->GetVetoLV();
     coordDetectorLV = detector->GetCoordDetectorLV();
     copperPlateLV   = detector->GetCopperPlateLV();
@@ -44,16 +46,28 @@ G4VPhysicalVolume* Geometry::Construct() {
 void Geometry::ConstructSDandField() {
     auto* sdManager = G4SDManager::GetSDMpointer();
 
-    if (tofTopLV) {
-        auto* tofTopSD = new SensitiveDetector("TOFTopSD", 0, "TOFTop");
-        sdManager->AddNewDetector(tofTopSD);
-        tofTopLV->SetSensitiveDetector(tofTopSD);
+    if (trigger1LowerLV) {
+        auto* trigger1LowerSD = new SensitiveDetector("Trigger1LowerSD", 0, "Trigger1Lower");
+        sdManager->AddNewDetector(trigger1LowerSD);
+        trigger1LowerLV->SetSensitiveDetector(trigger1LowerSD);
     }
 
-    if (tofBottomLV) {
-        auto* tofBottomSD = new SensitiveDetector("TOFBottomSD", 1, "TOFBottom");
-        sdManager->AddNewDetector(tofBottomSD);
-        tofBottomLV->SetSensitiveDetector(tofBottomSD);
+    if (trigger1UpperLV) {
+        auto* trigger1UpperSD = new SensitiveDetector("Trigger1UpperSD", 1, "Trigger1Upper");
+        sdManager->AddNewDetector(trigger1UpperSD);
+        trigger1UpperLV->SetSensitiveDetector(trigger1UpperSD);
+    }
+
+    if (trigger2LowerLV) {
+        auto* trigger2LowerSD = new SensitiveDetector("Trigger2LowerSD", 4, "Trigger2Lower");
+        sdManager->AddNewDetector(trigger2LowerSD);
+        trigger2LowerLV->SetSensitiveDetector(trigger2LowerSD);
+    }
+
+    if (trigger2UpperLV) {
+        auto* trigger2UpperSD = new SensitiveDetector("Trigger2UpperSD", 7, "Trigger2Upper");
+        sdManager->AddNewDetector(trigger2UpperSD);
+        trigger2UpperLV->SetSensitiveDetector(trigger2UpperSD);
     }
 
     if (vetoLV) {
@@ -89,7 +103,7 @@ void Geometry::ConstructSDandField() {
     }
 
     if (bottomVolumeLV) {
-        auto* bottomSD = new SensitiveDetector("BottomSD", 7, "BottomVolume");
+        auto* bottomSD = new SensitiveDetector("BottomSD", 8, "BottomVolume");
         sdManager->AddNewDetector(bottomSD);
         bottomVolumeLV->SetSensitiveDetector(bottomSD);
     }
