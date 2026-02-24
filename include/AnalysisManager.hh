@@ -7,6 +7,11 @@
 #include <globals.hh>
 #include <Sizes.hh>
 #include <fstream>
+#include <string>
+
+#ifdef G4MULTITHREADED
+#include <G4Threading.hh>
+#endif
 
 class AnalysisManager {
 public:
@@ -17,6 +22,11 @@ public:
 
     void Open();
     void Close();
+
+#ifdef G4MULTITHREADED
+    /** Merge per-thread CSV parts into final baseName.csv (call only on master after run). */
+    static void MergeCsvParts(const std::string& baseName);
+#endif
 
     // Event summary
     void FillEventRow(G4int eventID, G4int nPrimaries, G4int nHits);
@@ -63,6 +73,10 @@ private:
     G4int interactionsNT{-1};   // Simplified
 
     void Book();
+#ifdef G4MULTITHREADED
+    /** Thread-specific suffix for CSV filenames (e.g. "_0", "_master"). */
+    std::string CsvSuffix() const;
+#endif
 
     std::ofstream primaryCsv;
     std::ofstream fiberCsv;

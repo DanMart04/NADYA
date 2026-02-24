@@ -24,6 +24,16 @@ void RunAction::EndOfRunAction(const G4Run *) {
     analysisManager->Close();
     auto *mgr = G4AccumulableManager::Instance();
     mgr->Merge();
+#ifdef G4MULTITHREADED
+    if (G4Threading::IsMasterThread()) {
+        AnalysisManager::MergeCsvParts("events_primary");
+        AnalysisManager::MergeCsvParts("events_fibers");
+        AnalysisManager::MergeCsvParts("events_hits");
+        AnalysisManager::MergeCsvParts("events_secondaries");
+        AnalysisManager::MergeCsvParts("events_crystals");
+        AnalysisManager::MergeCsvParts("events_edep");
+    }
+#endif
     if (G4Threading::IsMasterThread()) {
         totals.crystalAndVeto = crystalAndVeto.GetValue();
         totals.crystalOnly = crystalOnly.GetValue();

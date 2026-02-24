@@ -1,5 +1,11 @@
 #include "AnalysisManager.hh"
 #include <iomanip>
+#ifdef G4MULTITHREADED
+#include <filesystem>
+#include <fstream>
+#include <algorithm>
+namespace fs = std::filesystem;
+#endif
 
 using namespace Sizes;
 
@@ -70,12 +76,22 @@ void AnalysisManager::Book() {
 void AnalysisManager::Open() {
     G4AnalysisManager::Instance()->OpenFile(fileName);
 
+#ifdef G4MULTITHREADED
+    const std::string suf = CsvSuffix();
+    primaryCsv.open("events_primary" + suf + ".csv", std::ios::out | std::ios::trunc);
+    fiberCsv.open("events_fibers" + suf + ".csv", std::ios::out | std::ios::trunc);
+    hitsCsv.open("events_hits" + suf + ".csv", std::ios::out | std::ios::trunc);
+    secondaryCsv.open("events_secondaries" + suf + ".csv", std::ios::out | std::ios::trunc);
+    crystalCsv.open("events_crystals" + suf + ".csv", std::ios::out | std::ios::trunc);
+    edepCsv.open("events_edep" + suf + ".csv", std::ios::out | std::ios::trunc);
+#else
     primaryCsv.open("events_primary.csv", std::ios::out | std::ios::trunc);
     fiberCsv.open("events_fibers.csv", std::ios::out | std::ios::trunc);
     hitsCsv.open("events_hits.csv", std::ios::out | std::ios::trunc);
     secondaryCsv.open("events_secondaries.csv", std::ios::out | std::ios::trunc);
     crystalCsv.open("events_crystals.csv", std::ios::out | std::ios::trunc);
     edepCsv.open("events_edep.csv", std::ios::out | std::ios::trunc);
+#endif
 
     primaryCsv << "event_id,particle,E_MeV,dir_x,dir_y,dir_z\n";
     fiberCsv << "event_id,particle,plane,module_id,layer_id,row_id,copy_no,edep_MeV,t_ns\n";
@@ -97,6 +113,56 @@ void AnalysisManager::Close() {
     if (crystalCsv.is_open()) crystalCsv.close();
     if (edepCsv.is_open()) edepCsv.close();
 }
+
+#ifdef G4MULTITHREADED
+std::string AnalysisManager::CsvSuffix() const {
+    const G4int id = G4Threading::G4GetThreadId();
+    if (id < 0) return "_master";
+    return "_" + std::to_string(id);
+}
+
+void AnalysisManager::MergeCsvParts(const std::string& baseName) {
+    std::string prefix = baseName + "_";
+    std::string outPath = baseName + ".csv";
+    std::vector<std::string> parts;
+    try {
+        for (const auto& entry : fs::directory_iterator(".")) {
+            if (!entry.is_regular_file()) continue;
+            std::string name = entry.path().filename().string();
+            if (name.size() > prefix.size() + 4 &&
+                name.compare(0, prefix.size(), prefix) == 0 &&
+                name.compare(name.size() - 4, 4, ".csv") == 0) {
+                parts.push_back(name);
+            }
+        }
+    } catch (const std::exception& e) {
+        G4cerr << "[MergeCsvParts] " << baseName << ": " << e.what() << G4endl;
+        return;
+    }
+    if (parts.empty()) return;
+    std::sort(parts.begin(), parts.end());
+    std::ofstream out(outPath, std::ios::out | std::ios::trunc);
+    if (!out.is_open()) {
+        G4cerr << "[MergeCsvParts] Cannot open " << outPath << G4endl;
+        return;
+    }
+    bool headerWritten = false;
+    for (const std::string& partPath : parts) {
+        std::ifstream in(partPath);
+        if (!in.is_open()) continue;
+        std::string line;
+        if (!std::getline(in, line)) { in.close(); continue; }
+        if (!headerWritten) {
+            out << line << "\n";
+            headerWritten = true;
+        }
+        while (std::getline(in, line))
+            out << line << "\n";
+        in.close();
+        try { fs::remove(partPath); } catch (...) {}
+    }
+}
+#endif
 
 void AnalysisManager::FillEventRow(G4int eventID, G4int nPrimaries, G4int nHits) {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
