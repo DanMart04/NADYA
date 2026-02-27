@@ -1,6 +1,12 @@
 #include "Geometry.hh"
+#include <G4UserLimits.hh>
 
 using namespace Sizes;
+
+namespace {
+const G4double triggerStepMax = 1.0 * mm;
+const G4double fiberStepMax = 0.2 * mm;
+}
 
 Geometry::Geometry() {
     nist = G4NistManager::Instance();
@@ -46,25 +52,32 @@ G4VPhysicalVolume* Geometry::Construct() {
 void Geometry::ConstructSDandField() {
     auto* sdManager = G4SDManager::GetSDMpointer();
 
+    auto* triggerLimits = new G4UserLimits(triggerStepMax);
+    auto* fiberLimits = new G4UserLimits(fiberStepMax);
+
     if (trigger1LowerLV) {
+        trigger1LowerLV->SetUserLimits(triggerLimits);
         auto* trigger1LowerSD = new SensitiveDetector("Trigger1LowerSD", 0, "Trigger1Lower");
         sdManager->AddNewDetector(trigger1LowerSD);
         trigger1LowerLV->SetSensitiveDetector(trigger1LowerSD);
     }
 
     if (trigger1UpperLV) {
+        trigger1UpperLV->SetUserLimits(triggerLimits);
         auto* trigger1UpperSD = new SensitiveDetector("Trigger1UpperSD", 1, "Trigger1Upper");
         sdManager->AddNewDetector(trigger1UpperSD);
         trigger1UpperLV->SetSensitiveDetector(trigger1UpperSD);
     }
 
     if (trigger2LowerLV) {
+        trigger2LowerLV->SetUserLimits(triggerLimits);
         auto* trigger2LowerSD = new SensitiveDetector("Trigger2LowerSD", 4, "Trigger2Lower");
         sdManager->AddNewDetector(trigger2LowerSD);
         trigger2LowerLV->SetSensitiveDetector(trigger2LowerSD);
     }
 
     if (trigger2UpperLV) {
+        trigger2UpperLV->SetUserLimits(triggerLimits);
         auto* trigger2UpperSD = new SensitiveDetector("Trigger2UpperSD", 7, "Trigger2Upper");
         sdManager->AddNewDetector(trigger2UpperSD);
         trigger2UpperLV->SetSensitiveDetector(trigger2UpperSD);
@@ -77,12 +90,14 @@ void Geometry::ConstructSDandField() {
     }
 
     if (coordDetectorLV) {
+        coordDetectorLV->SetUserLimits(fiberLimits);
         auto* coordSD = new SensitiveDetector("CoordSD", 3, "TOFFibers");
         sdManager->AddNewDetector(coordSD);
         coordDetectorLV->SetSensitiveDetector(coordSD);
     }
 
     if (fiberStripLV) {
+        fiberStripLV->SetUserLimits(fiberLimits);
         auto* fiberSD = new SensitiveDetector("FiberSD", 5, "Fiber");
         sdManager->AddNewDetector(fiberSD);
         fiberStripLV->SetSensitiveDetector(fiberSD);

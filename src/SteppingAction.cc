@@ -1,76 +1,77 @@
 #include "SteppingAction.hh"
 
+
 void SteppingAction::UserSteppingAction(const G4Step* step) {
-    // Get EventAction
-    auto* ea = dynamic_cast<EventAction*>(
-        G4EventManager::GetEventManager()->GetUserEventAction());
-    if (!ea) return;
+    const auto* post = step->GetPostStepPoint();
+    const auto* postProc = post->GetProcessDefinedStep();
 
-    // Get process info
-    const G4VProcess* process = step->GetPostStepPoint()->GetProcessDefinedStep();
-    if (!process) return;
+    const G4ThreeVector x = post->GetPosition() / mm;
+    const G4double t = post->GetGlobalTime() / ns;
 
-    G4String processName = process->GetProcessName();
+    const auto* touch = post->GetTouchable();
+    G4String volName = "World";
+    int copyNo = -1;
+    if (touch && touch->GetVolume()) {
+        volName = touch->GetVolume()->GetName();
+        copyNo = touch->GetVolume()->GetCopyNo();
+    }
 
-    auto* track = step->GetTrack();
-    auto* particle = track->GetDefinition();
-    auto* prePoint = step->GetPreStepPoint();
-    auto* touchable = prePoint->GetTouchable();
-    G4String volumeName = touchable->GetVolume()->GetName();
+    const auto* track = step->GetTrack();
+    const G4int trackID = track->GetTrackID();
+    const G4int parentID = track->GetParentID();
 
-    const auto* secondaries = step->GetSecondaryInCurrentStep();
-    if (secondaries && !secondaries->empty()) {
-        for (const auto* secTrack : *secondaries) {
-            if (!secTrack) continue;
-            SecondaryRec srec;
-            srec.secondaryTrackID = secTrack->GetTrackID();
-            srec.parentTrackID = track->GetTrackID();
-            srec.parentPDG = particle->GetPDGEncoding();
-            srec.parentName = particle->GetParticleName();
-            srec.process = processName;
-            srec.birthVolumeName = volumeName;
-            srec.secondaryName = secTrack->GetDefinition()->GetParticleName();
-            srec.secondaryPDG = secTrack->GetDefinition()->GetPDGEncoding();
-            srec.E_MeV = secTrack->GetKineticEnergy() / MeV;
-            srec.dir0 = secTrack->GetMomentumDirection();
-            srec.birthPos_mm = prePoint->GetPosition() / mm;
-            srec.t0_ns = prePoint->GetGlobalTime() / ns;
-            ea->secBuf.push_back(std::move(srec));
+    auto secs = step->GetSecondaryInCurrentStep();
+    auto* ea = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
+    if (ea) {
+        if (secs && !secs->empty()) {
+            for (size_t i = 0; i < secs->size(); ++i) {
+                const auto* sc = (*secs)[i];
+                const auto* cp = sc->GetCreatorProcess();
+
+                if (sc->GetDefinition()->GetParticleName() == "opticalphoton" and Configuration::savePhotons) {
+                    if (volName == "CrystalPVP")
+                        ea->photonCountBuf[0] += 1;
+                    if (volName == "VetoPVP")
+                        ea->photonCountBuf[1] += 1;
+                    if (volName == "BottomVetoPVP")
+                        ea->photonCountBuf[2] += 1;
+                }
+                InteractionRec rec;
+                rec.trackID = trackID;
+                rec.parentID = parentID;
+                rec.process = cp ? cp->GetProcessName() : "unknown";
+                rec.volumeName = volName;
+                rec.volumeID = copyNo;
+                rec.pos_mm = x;
+                rec.t_ns = t;
+                rec.secIndex = static_cast<G4int>(i);
+                rec.secPDG = sc->GetDefinition()->GetPDGEncoding();
+                rec.secName = sc->GetDefinition()->GetParticleName();
+                rec.secE_MeV = sc->GetKineticEnergy() / MeV;
+                rec.secDir = sc->GetMomentumDirection();
+                ea->interBuf.emplace_back(std::move(rec));
+            }
+            return;
+        }
+
+        if (postProc) {
+            const auto& pname = postProc->GetProcessName();
+            if (pname != "Transportation") {
+                InteractionRec rec;
+                rec.trackID = trackID;
+                rec.parentID = parentID;
+                rec.process = pname;
+                rec.volumeName = volName;
+                rec.volumeID = copyNo;
+                rec.pos_mm = x;
+                rec.t_ns = t;
+                rec.secIndex = -1;
+                rec.secPDG = 0;
+                rec.secName = "";
+                rec.secE_MeV = 0.0;
+                rec.secDir = G4ThreeVector();
+                ea->interBuf.emplace_back(std::move(rec));
+            }
         }
     }
-
-    // Record only critical interactions for gamma
-    // compt = Compton, phot = photoelectric, conv = pair production
-    if (processName != "compt" && processName != "phot" && processName != "conv") {
-        return;
-    }
-
-    // Check it's a gamma
-    if (particle->GetParticleName() != "gamma") {
-        return;
-    }
-
-    // Get interaction info
-    G4int trackID = track->GetTrackID();
-    G4int parentID = track->GetParentID();
-
-    G4ThreeVector pos = prePoint->GetPosition() / mm;
-
-    // Secondary energy
-    G4double E_MeV = 0.0;
-    if (secondaries && secondaries->size() > 0) {
-        // Take energy of first secondary (usually electron or positron)
-        E_MeV = (*secondaries)[0]->GetKineticEnergy() / MeV;
-    }
-
-    // Create record
-    InteractionRec rec;
-    rec.trackID = trackID;
-    rec.parentID = parentID;
-    rec.process = processName;
-    rec.volumeName = volumeName;
-    rec.pos_mm = pos;
-    rec.E_MeV = E_MeV;
-
-    ea->interBuf.push_back(rec);
 }

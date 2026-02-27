@@ -10,7 +10,7 @@ double fluxCOMP(const double E, const double A, const double alpha, const double
 }
 
 // SEP: read CSV
-static std::vector<double> readSepRow(int year, int order, const std::string &csvPath) {
+static std::vector<double> readSepRow(int year, int order, const std::string& csvPath) {
     std::ifstream in(csvPath);
     if (!in.is_open()) {
         throw std::runtime_error("SEP: cannot open coefficients CSV: " + csvPath);
@@ -26,7 +26,8 @@ static std::vector<double> readSepRow(int year, int order, const std::string &cs
         while (std::getline(ss, cell, ',')) {
             try {
                 cols.push_back(std::stod(cell));
-            } catch (...) {
+            }
+            catch (...) {
                 cols.push_back(std::numeric_limits<double>::quiet_NaN());
             }
         }
@@ -43,7 +44,7 @@ static std::vector<double> readSepRow(int year, int order, const std::string &cs
                              " order=" + std::to_string(order));
 }
 
-double fluxSEP(const double E, const int year, const int order, const std::string &csvPath) {
+double fluxSEP(const double E, const int year, const int order, const std::string& csvPath) {
     static int cached_year = 0, cached_order = 0;
     static std::string cached_path;
     static std::vector<double> coeffs;
@@ -65,7 +66,7 @@ double fluxSEP(const double E, const int year, const int order, const std::strin
 }
 
 // --- Table ---
-double fluxTable(const double E, const std::string &csvPath) {
+double fluxTable(const double E, const std::string& csvPath) {
     static std::string cached_path;
     static std::vector<double> cached_energies;
     static std::vector<double> cached_fluxes;
@@ -93,7 +94,8 @@ double fluxTable(const double E, const std::string &csvPath) {
             try {
                 energy = std::stod(energy_str);
                 flux = std::stod(flux_str);
-            } catch (...) {
+            }
+            catch (...) {
                 continue;
             }
 
@@ -132,7 +134,9 @@ double fluxTable(const double E, const std::string &csvPath) {
 }
 
 // --- Uniform ---
-double fluxUniform(double) { return 1.0; }
+double fluxUniform(const double E, const double E_min, const double E_max) {
+    return 1.0 / (E * std::log(E_max / E_min));
+}
 
 
 // --- Galactic ---
@@ -201,7 +205,7 @@ double J_Alpha(const double E) {
     return term1;
 }
 
-double fluxGalactic(const double E, const double phiMV, const std::string &name) {
+double fluxGalactic(const double E, const double phiMV, const std::string& name) {
     double mass = 0;
     const int Z = name == "alpha" ? 2 : 1;
     const double phiGV = phiMV * 1e-3 * Z;
@@ -236,28 +240,31 @@ double fluxGalactic(const double E, const double phiMV, const std::string &name)
 
 // ---------------- Area ----------------
 
-double effectiveArea_cm2(const double R_mm, const double H_mm, const FluxDir dir) {
+double Area_cm2(const double R_mm, const double H_mm, const FluxDir dir) {
     const double R_cm = R_mm / 10.0;
     const double H_cm = H_mm / 10.0;
 
-    if (dir == FluxDir::Vertical) {
+    if (dir == FluxDir::Vertical_up || dir == FluxDir::Vertical_down) {
         return M_PI * R_cm * R_cm;
     }
     if (dir == FluxDir::Horizontal) {
         return 2 * R_cm * H_cm;
     }
     const double val = std::sqrt(R_cm * R_cm + H_cm * H_cm) + 0.5;
-    return 2.0 * M_PI * M_PI * val * val;
+    if (dir == FluxDir::Isotropic_down || dir == FluxDir::Isotropic_up) {
+        return 2.0 * M_PI * M_PI * val * val;
+    }
+    return 4.0 * M_PI * M_PI * val * val;
 }
 
 // ---------------- Integral ----------------
 
-static double simpson(const std::function<double(double)> &f, const double a, const double b) {
+static double simpson(const std::function<double(double)>& f, const double a, const double b) {
     const double c = 0.5 * (a + b);
     return (b - a) * (f(a) + 4.0 * f(c) + f(b)) / 6.0;
 }
 
-static double adaptiveSimpsonRec(const std::function<double(double)> &f,
+static double adaptiveSimpsonRec(const std::function<double(double)>& f,
                                  const double a, const double b, const double eps,
                                  const double whole, const int depth) {
     const double c = 0.5 * (a + b);
@@ -268,55 +275,74 @@ static double adaptiveSimpsonRec(const std::function<double(double)> &f,
         return left + right + delta / 15.0;
     }
     return adaptiveSimpsonRec(f, a, c, eps / 2.0, left, depth - 1) +
-           adaptiveSimpsonRec(f, c, b, eps / 2.0, right, depth - 1);
+        adaptiveSimpsonRec(f, c, b, eps / 2.0, right, depth - 1);
 }
 
-double integrateAdaptiveSimpson(const std::function<double(double)> &f,
+double integrateAdaptiveSimpson(const std::function<double(double)>& f,
                                 const double a, const double b,
                                 const double rel_tol, const int max_depth) {
+    if (a == b) return 0;
     const double initial = simpson(f, a, b);
     const double eps = rel_tol * std::max(1.0, std::fabs(initial));
     return adaptiveSimpsonRec(f, a, b, eps, initial, max_depth);
 }
 
+static inline double binEdgeLog(double Emin, double Emax, int nBins, int i) {
+    // i in [0..nBins], logspace like np.logspace
+    const double ratio = Emax / Emin;
+    const double t = static_cast<double>(i) / static_cast<double>(nBins);
+    return Emin * std::pow(ratio, t);
+}
+
 
 RateResult computeRate(const FluxType type,
-                       const FluxParams &p,
+                       const FluxParams& p,
                        EnergyRange eRange,
                        double A_eff_cm2,
                        const int N_histories,
-                       const RateCounts &detCounts) {
+                       const RateCounts& detCounts) {
     std::function<double(double)> f;
 
     switch (type) {
-        case FluxType::PLAW:
-            f = [=](const double E) { return fluxPLAW(E, p.A, p.alpha, p.E_piv); };
-            break;
-        case FluxType::COMP:
-            f = [=](const double E) { return fluxCOMP(E, p.A, p.alpha, p.E_piv, p.E_peak); };
-            break;
-        case FluxType::SEP:
-            f = [=](const double E) { return fluxSEP(E, p.sep_year, p.sep_order, p.sep_csv_path); };
-            break;
-        case FluxType::TABLE:
-            f = [=](const double E) { return fluxTable(E, p.table_path); };
-            break;
-        case FluxType::UNIFORM:
-            f = [=](const double E) { return fluxUniform(E); };
-            break;
-        case FluxType::GALACTIC: {
-            eRange.Emin /= 1000.0;
-            eRange.Emax /= 1000.0;
-            A_eff_cm2 /= 10000.0;
-            f = [=](const double E_GeV) { return fluxGalactic(E_GeV, p.phiMV, p.particle); };
-            break;
-        }
-        default:
-            throw std::runtime_error("Unknown flux type");
+    case FluxType::PLAW:
+        f = [=](const double E) {
+            return fluxPLAW(E, p.A, p.alpha, p.E_piv);
+        };
+        break;
+    case FluxType::COMP:
+        f = [=](const double E) {
+            return fluxCOMP(E, p.A, p.alpha, p.E_piv, p.E_peak);
+        };
+        break;
+    case FluxType::SEP:
+        f = [=](const double E) {
+            return fluxSEP(E, p.sep_year, p.sep_order, p.sep_csv_path);
+        };
+        break;
+    case FluxType::TABLE:
+        f = [=](const double E) {
+            return fluxTable(E, p.table_path);
+        };
+        break;
+    case FluxType::UNIFORM:
+        f = [=](const double E) {
+            return fluxUniform(E, eRange.Emin, eRange.Emax);
+        };
+        break;
+    case FluxType::GALACTIC: {
+        eRange.Emin /= 1000.0;
+        eRange.Emax /= 1000.0;
+        A_eff_cm2 /= 10000.0;
+        f = [=](const double E_GeV) {
+            return fluxGalactic(E_GeV, p.phiMV, p.particle);
+        };
+        break;
+    }
+    default:
+        throw std::runtime_error("Unknown flux type");
     }
 
     const double integral = integrateAdaptiveSimpson(f, eRange.Emin, eRange.Emax, 1e-6, 22);
-    // const double integral = 1;
     const double Ndot = A_eff_cm2 * integral;
 
     RateResult R;
@@ -326,5 +352,82 @@ RateResult computeRate(const FluxType type,
     R.rateCrystal = N_histories > 0 ? (detCounts.crystalOnly + 0.0) * Ndot / N_histories : 0.0;
     const int bothDet = detCounts.crystalOnly + detCounts.crystalAndVeto;
     R.rateBoth = N_histories > 0 ? (bothDet + 0.0) * Ndot / N_histories : 0.0;
+    return R;
+}
+
+RateResult computeRateReal(FluxType type,
+                           const FluxParams& p,
+                           EnergyRange eRange,
+                           const std::vector<double>& Aeff,
+                           int nBins) {
+    if (nBins <= 0) throw std::runtime_error("computeRateReal: nBins <= 0");
+    if (static_cast<int>(Aeff.size()) != nBins)
+        throw std::runtime_error("computeRateReal: Aeff.size() != nBins");
+    if (eRange.Emin <= 0.0 || eRange.Emax <= 0.0 || eRange.Emax <= eRange.Emin)
+        throw std::runtime_error("computeRateReal: invalid energy range");
+
+    std::function<double(double)> fluxF;
+
+
+    double areaScale = 1.0;
+    double energyScale = 1.0;
+
+    switch (type) {
+    case FluxType::PLAW:
+        fluxF = [=](double E_MeV) {
+            return fluxPLAW(E_MeV, p.A, p.alpha, p.E_piv);
+        };
+        break;
+    case FluxType::COMP:
+        fluxF = [=](double E_MeV) {
+            return fluxCOMP(E_MeV, p.A, p.alpha, p.E_piv, p.E_peak);
+        };
+        break;
+    case FluxType::SEP:
+        fluxF = [=](double E_MeV) {
+            return fluxSEP(E_MeV, p.sep_year, p.sep_order, p.sep_csv_path);
+        };
+        break;
+    case FluxType::TABLE:
+        fluxF = [=](double E_MeV) {
+            return fluxTable(E_MeV, p.table_path);
+        };
+        break;
+    case FluxType::UNIFORM:
+        fluxF = [=](double E_MeV) {
+            return fluxUniform(E_MeV, eRange.Emin, eRange.Emax);
+        };
+        break;
+    case FluxType::GALACTIC:
+        energyScale = 1.0 / 1000.0;
+        areaScale = 1.0 / 10000.0;
+        fluxF = [=](double E_GeV) {
+            return fluxGalactic(E_GeV, p.phiMV, p.particle);
+        };
+        break;
+    default:
+        throw std::runtime_error("computeRateReal: unknown flux type");
+    }
+
+    double rateReal = 0.0;
+
+    for (int i = 0; i < nBins; ++i) {
+        const double e1 = binEdgeLog(eRange.Emin, eRange.Emax, nBins, i);
+        const double e2 = binEdgeLog(eRange.Emin, eRange.Emax, nBins, i + 1);
+        const double Ec = std::sqrt(e1 * e2);
+        const double dE = e2 - e1;
+
+        double A = Aeff[i];
+
+        const double Earg = Ec * energyScale;
+        const double dEarg = dE * energyScale;
+        const double Aarg = A * areaScale;
+
+        const double phi = fluxF(Earg);
+        rateReal += phi * Aarg * dEarg;
+    }
+
+    RateResult R;
+    R.rateRealCrystal = rateReal;
     return R;
 }

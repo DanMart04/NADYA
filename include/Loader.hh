@@ -28,8 +28,10 @@
 
 #include "Geometry.hh"
 #include "Sizes.hh"
+#include "Configuration.hh"
 #include "ActionInitialization.hh"
 #include "CountRates.hh"
+#include "PostProcessing.hh"
 
 #ifdef G4MULTITHREADED
 #include <G4MTRunManager.hh>
@@ -42,13 +44,10 @@ class Loader {
     G4String macroFile;
     int numThreads;
     bool useUI;
-    G4String detectorType;
-    G4String fluxType;
-    G4String fluxDirection;
-    G4bool useOptics;
-    G4double eCrystalThreshold;
-    G4double eVetoThreshold;
-    G4int fiberLayers;
+
+    G4double area;
+    std::vector<G4double> effArea;
+    std::vector<G4double> effAreaOpt;
 
 #ifdef G4MULTITHREADED
     G4MTRunManager *runManager;
@@ -66,14 +65,16 @@ private:
     std::string configPath;
     G4int crystalOnly{};
     G4int crystalAndVeto{};
-    std::array<G4long, 16> optPhotons{};
+    G4int crystalOnlyOpt{};
+    G4int crystalAndVetoOpt{};
 
     std::string geomConfigPath;
 
+    FluxDir dir{};
+
     [[nodiscard]] std::string ReadValue(const std::string &, const std::string &) const;
     void SaveConfig() const;
-
-    void ParseGeomConfig();
+    void RunPostProcessing() const;
 };
 
 #endif //LOADER_HH

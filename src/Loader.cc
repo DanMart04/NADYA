@@ -1,39 +1,76 @@
 #include "Loader.hh"
 
+using namespace Configuration;
+
 Loader::Loader(int argc, char** argv) {
     numThreads = G4Threading::G4GetNumberOfCores();
     useUI = true;
     macroFile = "../run.mac";
+    geomConfigPath = "../geometry_txt";
     detectorType = "CsI";
     fluxType = "Uniform";
     fluxDirection = "isotropic";
-    useOptics = false;
-    fiberLayers = 2;
     eCrystalThreshold = 0 * MeV;
     eVetoThreshold = 0 * MeV;
+    useOptics = false;
+    yieldScale = 1;
+    oCrystalThreshold = 0 * MeV;
+    oVetoThreshold = 0 * MeV;
+    outputFile = "NADYA.root";
+    nBins = 1000;
+    saveSecondaries = false;
+    savePhotons = false;
 
     for (int i = 0; i < argc; i++) {
-        if (std::string input(argv[i]); input == "-t" || input == "--threads") {
+        if (std::string input(argv[i]); input == "-i" || input == "--input") {
+            macroFile = argv[i + 1];
+            useUI = false;
+            viewDeg = 360 * deg;
+        } else if (input == "-t" || input == "--threads") {
             numThreads = std::stoi(argv[i + 1]);
+        } else if (input == "-ys" || input == "--yield-scale") {
+            yieldScale = std::stoi(argv[i + 1]);
+        } else if (input == "--bins") {
+            nBins = std::stoi(argv[i + 1]);
+        } else if ((input == "-vd" || input == "--view-deg") and useUI) {
+            viewDeg = std::stod(argv[i + 1]) * deg;
         } else if (input == "-ct" || input == "--crystal-threshold") {
             eCrystalThreshold = std::stod(argv[i + 1]) * MeV;
         } else if (input == "-vt" || input == "--veto-threshold") {
             eVetoThreshold = std::stod(argv[i + 1]) * MeV;
+        } else if (input == "-oct" || input == "--crystal-optic-threshold") {
+            oCrystalThreshold = std::stoi(argv[i + 1]);
+        } else if (input == "-ovt" || input == "--veto-optic-threshold") {
+            oVetoThreshold = std::stoi(argv[i + 1]);
+        } else if (input == "-obvt" || input == "--bottom-veto-optic-threshold") {
+            oBottomVetoThreshold = std::stoi(argv[i + 1]);
         } else if (input == "-noUI") {
             useUI = false;
+        } else if (input == "--polished") {
+            polishedTyvek = true;
         } else if (input == "-d" || input == "--detector") {
             detectorType = argv[i + 1];
+        } else if (input == "-csc" || input == "--crystal-sipm-config" || input == "-sipm") {
+            crystalSiPMConfig = argv[i + 1];
         } else if (input == "-f" || input == "--flux-type") {
             fluxType = argv[i + 1];
         } else if (input == "--flux-dir" || input == "--f-dir" || input == "-fd") {
             fluxDirection = argv[i + 1];
         } else if (input == "--use-optics") {
             useOptics = true;
-        } else if (input == "-i" || input == "--input") {
-            macroFile = argv[i + 1];
-            useUI = false;
+        } else if (input == "--save-secondaries") {
+            saveSecondaries = true;
+        } else if (input == "--save-photons") {
+            savePhotons = true;
+        } else if (input == "-g" || input == "--geom-config") {
+            geomConfigPath = argv[i + 1];
+        } else if (input == "-o" || input == "--output-file") {
+            outputFile = argv[i + 1];
+            outputFile += ".root";
         }
     }
+
+    savePhotons = savePhotons and useOptics;
 
     configPath = "../Flux_config/" + fluxType + "_params.txt";
 
@@ -47,7 +84,7 @@ Loader::Loader(int argc, char** argv) {
     runManager = new G4RunManager;
 #endif
 
-    Geometry* realWorld = new Geometry();
+    auto* realWorld = new Geometry();
     runManager->SetUserInitialization(realWorld);
     auto* physicsList = new FTFP_BERT;
     physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
@@ -65,7 +102,7 @@ Loader::Loader(int argc, char** argv) {
         op->SetProcessActivation("OpBoundary", true);
 
         op->SetScintTrackSecondariesFirst(true);
-        op->SetCerenkovTrackSecondariesFirst(true);
+        op->SetCerenkovTrackSecondariesFirst(false);
         // op->SetScintByParticleType(true);
         // op->SetCerenkovMaxPhotonsPerStep(200);
         // op->SetCerenkovMaxBetaChange(10.0);
@@ -76,8 +113,27 @@ Loader::Loader(int argc, char** argv) {
     physicsList->RegisterPhysics(new G4StepLimiterPhysics());
     runManager->SetUserInitialization(physicsList);
 
-    runManager->SetUserInitialization(
-        new ActionInitialization(fluxDirection, fluxType, eCrystalThreshold, eVetoThreshold, useOptics));
+    G4double EminMeV = std::max({std::stod(ReadValue("E_min:", "")) * MeV, eCrystalThreshold});
+    G4double EmaxMeV = std::stod(ReadValue("E_max:", "")) * MeV;
+
+    if (fluxDirection == "isotropic") {
+        dir = FluxDir::Isotropic;
+    } else if (fluxDirection == "isotropic_up") {
+        dir = FluxDir::Isotropic_up;
+    } else if (fluxDirection == "isotropic_down") {
+        dir = FluxDir::Isotropic_down;
+    } else if (fluxDirection == "vertical_up") {
+        dir = FluxDir::Vertical_up;
+    } else if (fluxDirection == "vertical_down") {
+        dir = FluxDir::Vertical_down;
+    } else if (fluxDirection == "horizontal") {
+        dir = FluxDir::Horizontal;
+    }
+
+    const double R_mm = std::max(Sizes::Envelope::halfX, Sizes::Envelope::halfY);
+    const double H_mm = Sizes::Envelope::sizeZ;
+    area = Area_cm2(R_mm, H_mm, dir);
+    runManager->SetUserInitialization(new ActionInitialization(area, EminMeV, EmaxMeV));
     runManager->Initialize();
 
     visManager = new G4VisExecutive;
@@ -87,21 +143,26 @@ Loader::Loader(int argc, char** argv) {
     if (!useUI) {
         const G4String command = "/control/execute ";
         UImanager->ApplyCommand(command + macroFile);
-    }
-    else {
-        G4UIExecutive* ui = new G4UIExecutive(argc, argv, "qt");
+    } else {
+        auto* ui = new G4UIExecutive(argc, argv, "qt");
         UImanager->ApplyCommand("/control/execute ../vis.mac");
         ui->SessionStart();
         delete ui;
     }
 
-    const auto* ra = dynamic_cast<const RunAction*>(runManager->GetUserRunAction());
-    if (ra) {
-        const auto& [cOnly, cAndV] = ra->GetCounts();
+    const auto* runAction = dynamic_cast<const RunAction*>(runManager->GetUserRunAction());
+    if (runAction) {
+        const auto& [cOnly, cAndV] = runAction->GetCounts();
         crystalOnly = cOnly;
         crystalAndVeto = cAndV;
+        effArea = runAction->GetEffArea();
+        const auto& [cOnlyOpt, cAndVOpt] = runAction->GetOptCounts();
+        crystalOnlyOpt = cOnlyOpt;
+        crystalAndVetoOpt = cAndVOpt;
+        effAreaOpt = runAction->GetEffAreaOpt();
     }
-    SaveConfig();
+    // SaveConfig();
+    // RunPostProcessing();
 }
 
 Loader::~Loader() {
@@ -154,18 +215,6 @@ std::vector<G4String> Split(const G4String& line) {
 void Loader::SaveConfig() const {
     const int N = std::stoi(ReadValue("/run/beamOn", "../run.mac"));
 
-    FluxDir dir{};
-    if (fluxDirection == "isotropic") {
-        dir = FluxDir::Isotropic;
-    }
-    else if (fluxDirection == "vertical") {
-        dir = FluxDir::Vertical;
-    }
-    else if (fluxDirection == "horizontal") {
-        dir = FluxDir::Horizontal;
-    }
-    // double A_eff_cm2 = effectiveArea_cm2(Sizes::modelRadius, Sizes::modelHeight, dir);
-
     EnergyRange er{};
     FluxType fType{};
     FluxParams fp{};
@@ -177,8 +226,7 @@ void Loader::SaveConfig() const {
         fp.E_piv = std::stod(ReadValue("E_Piv:"));
         er.Emin = std::stod(ReadValue("E_min:"));
         er.Emax = std::stod(ReadValue("E_max:"));
-    }
-    else if (fluxType == "COMP") {
+    } else if (fluxType == "COMP") {
         fType = FluxType::COMP;
         fp.A = std::stod(ReadValue("A:"));
         fp.alpha = std::stod(ReadValue("alpha:"));
@@ -186,51 +234,81 @@ void Loader::SaveConfig() const {
         fp.E_peak = std::stod(ReadValue("E_Peak:"));
         er.Emin = std::stod(ReadValue("E_min:"));
         er.Emax = std::stod(ReadValue("E_max:"));
-    }
-    else if (fluxType == "SEP") {
+    } else if (fluxType == "SEP") {
         fType = FluxType::SEP;
         fp.sep_year = std::stoi(ReadValue("year:"));
         fp.sep_order = std::stoi(ReadValue("order:"));
         fp.sep_csv_path = "../SEP_coefficients.CSV";
         er.Emin = std::stod(ReadValue("E_min:"));
         er.Emax = std::stod(ReadValue("E_max:"));
-    }
-    else if (fluxType == "Galactic") {
+    } else if (fluxType == "Galactic") {
         fType = FluxType::GALACTIC;
         fp.phiMV = std::stod(ReadValue("phiMV:"));
         fp.particle = ReadValue("particle:");
         er.Emin = std::stod(ReadValue("E_min:"));
         er.Emax = std::stod(ReadValue("E_max:"));
-    }
-    else if (fluxType == "Table") {
+    } else if (fluxType == "Table") {
         fType = FluxType::TABLE;
         fp.particle = ReadValue("particle:");
         fp.table_path = ReadValue("table_path:");
         er.Emin = std::stod(ReadValue("E_min:"));
         er.Emax = std::stod(ReadValue("E_max:"));
-    }
-    else {
+    } else {
         fType = FluxType::UNIFORM;
-        er.Emin = 0.001;
-        er.Emax = 500.0;
+        er.Emin = std::stod(ReadValue("E_min:"));
+        er.Emax = std::stod(ReadValue("E_max:"));
     }
 
     RateCounts counts{crystalOnly, crystalAndVeto};
+    RateCounts countsOpt{crystalOnlyOpt, crystalAndVetoOpt};
 
     RateResult rr{};
     bool rate_ok = true;
     try {
-        // rr = computeRate(fType, fp, er, A_eff_cm2, N, counts);
+        rr = computeRate(fType, fp, er, area, N, counts);
     }
     catch (const std::exception& ex) {
         rate_ok = false;
-        G4cerr << "[SaveConfig] WARNING: rate computation failed: " << ex.what() << G4endl;
+        // G4cerr << "[SaveConfig] WARNING: Rate computation failed: " << ex.what() << G4endl;
+    }
+
+    RateResult rrReal{};
+    bool rate_real_ok = true;
+    try {
+        rrReal = computeRateReal(fType, fp, er, effArea, nBins);
+    }
+    catch (const std::exception& ex) {
+        rate_real_ok = false;
+        // G4cerr << "[SaveConfig] WARNING: Real rate computation failed: " << ex.what() << G4endl;
+    }
+
+    RateResult rr_opt{};
+    bool rate_opt_ok = useOptics;
+    try {
+        rr_opt = computeRate(fType, fp, er, area, N, countsOpt);
+    }
+    catch (const std::exception& ex) {
+        rate_opt_ok = false;
+        // G4cerr << "[SaveConfig] WARNING: rate computation failed: " << ex.what() << G4endl;
+    }
+
+    RateResult rrReal_opt{};
+    bool rate_real_opt_ok = useOptics;
+    try {
+        rrReal_opt = computeRateReal(fType, fp, er, effAreaOpt, nBins);
+    }
+    catch (const std::exception& ex) {
+        rate_real_opt_ok = false;
+        // G4cerr << "[SaveConfig] WARNING: Real rate computation failed: " << ex.what() << G4endl;
     }
 
     std::ostringstream buf;
 
     buf << "N: " << N << "\n\n";
-    buf << "Detector_type: " << detectorType << "\n\n";
+    buf << "Detector_type: " << detectorType << "\n";
+    buf << "Crystal_SiPM_configuration: " << crystalSiPMConfig << "\n";
+    buf << "Tyvek_surface: " << (polishedTyvek ? "polished" : "diffuse") << "\n\n";
+    buf << "Use_optics: " << useOptics << "\n\n";
     buf << "Flux_type: " << fluxType << "\n";
     buf << "Flux_dir: " << fluxDirection << "\n";
 
@@ -239,26 +317,21 @@ void Loader::SaveConfig() const {
         buf << "A: " << std::stod(ReadValue("A:")) << ",\n\t";
         buf << "alpha: " << std::stod(ReadValue("alpha:")) << ",\n\t";
         buf << "E_Piv: " << std::stod(ReadValue("E_Piv:")) << "\n";
-    }
-    else if (fluxType == "COMP") {
+    } else if (fluxType == "COMP") {
         buf << "A: " << std::stod(ReadValue("A:")) << ",\n\t";
         buf << "alpha: " << std::stod(ReadValue("alpha:")) << ",\n\t";
         buf << "E_Piv: " << std::stod(ReadValue("E_Piv:")) << ",\n\t";
         buf << "E_Peak: " << std::stod(ReadValue("E_Peak:")) << "\n";
-    }
-    else if (fluxType == "SEP") {
+    } else if (fluxType == "SEP") {
         buf << "year: " << std::stoi(ReadValue("year:")) << ",\n\t";
         buf << "order: " << std::stoi(ReadValue("order:")) << "\n";
-    }
-    else if (fluxType == "Galactic") {
+    } else if (fluxType == "Galactic") {
         buf << "phiMV: " << std::stod(ReadValue("phiMV:")) << ",\n\t";
         buf << "particle: " << ReadValue("particle:") << "\n";
-    }
-    else if (fluxType == "Table") {
+    } else if (fluxType == "Table") {
         buf << "table_path: " << ReadValue("table_path:") << ",\n\t";
         buf << "particle: " << ReadValue("particle:") << "\n";
-    }
-    else if (fluxType == "Uniform") {
+    } else if (fluxType == "Uniform") {
         buf << "fractions: " << ReadValue("fractions:") << "\n";
     }
     buf << "}\n\n";
@@ -266,14 +339,11 @@ void Loader::SaveConfig() const {
     buf << "Particles: [";
     if (fluxType == "PLAW") {
         buf << "gamma";
-    }
-    else if (fluxType == "SEP") {
+    } else if (fluxType == "SEP") {
         buf << "proton";
-    }
-    else if (fluxType == "Galactic" or fluxType == "Table") {
+    } else if (fluxType == "Galactic" or fluxType == "Table") {
         buf << ReadValue("particle:");
-    }
-    else if (fluxType == "Uniform") {
+    } else if (fluxType == "Uniform") {
         buf << ReadValue("particles:");
     }
     buf << "]\n";
@@ -281,14 +351,11 @@ void Loader::SaveConfig() const {
     buf << "Energies:\n{\n\t";
     if (fluxType == "PLAW" || fluxType == "COMP") {
         buf << "gamma: ";
-    }
-    else if (fluxType == "SEP") {
+    } else if (fluxType == "SEP") {
         buf << "proton: ";
-    }
-    else if (fluxType == "Galactic" or fluxType == "Table") {
+    } else if (fluxType == "Galactic" or fluxType == "Table") {
         buf << ReadValue("particle:") << ": ";
-    }
-    else if (fluxType == "Uniform") {
+    } else if (fluxType == "Uniform") {
         std::vector<G4String> particles = Split(ReadValue("particles:"));
         std::vector<G4String> EminVec = Split(ReadValue("E_min:"));
         std::vector<G4String> EmaxVec = Split(ReadValue("E_max:"));
@@ -305,21 +372,68 @@ void Loader::SaveConfig() const {
     buf << "Crystal_only: " << crystalOnly << "\n\t";
     buf << "Veto_then_Crystal: " << crystalAndVeto << "\n}\n\n";
 
+    buf << "Optical_Counts:\n{\n\t";
+    buf << "Crystal_only: " << crystalOnlyOpt << "\n\t";
+    buf << "Veto_then_Crystal: " << crystalAndVetoOpt << "\n}\n\n";
+
+    buf << "Thresholds:\n{\n\t";
+    buf << std::fixed << std::setprecision(6);
+    if (rate_ok) {
+        buf << "Crystal: " << eCrystalThreshold << "\n\t";
+        buf << "Veto: " << eVetoThreshold << "\n";
+    }
+    buf << "}\n\n";
+
+    buf << "Optical_thresholds:\n{\n\t";
+    buf << std::fixed << std::setprecision(6);
+    if (rate_ok) {
+        buf << "Crystal: " << oCrystalThreshold << "\n\t";
+        buf << "Veto: " << oVetoThreshold << "\n\t";
+        buf << "BottomVeto: " << oBottomVetoThreshold << "\n";
+    }
+    buf << "}\n\n";
+
     buf << "Rates:\n{\n\t";
     buf << std::fixed << std::setprecision(6);
     if (rate_ok) {
-        // buf << "Area: " << A_eff_cm2 << "\n\t";
+        buf << "Area: " << area << "\n\t";
         buf << "Integral: " << rr.integral << "\n\t";
         buf << "Ndot: " << rr.Ndot << "\n\t";
         buf << "Rate_Crystal_only: " << rr.rateCrystal << "\n\t";
-        buf << "Rate_Both: " << rr.rateBoth << "\n";
-    }
-    else {
+        buf << "Rate_Both: " << rr.rateBoth << "\n\t";
+    } else {
         buf << "Area: NaN\n\t";
         buf << "Integral: NaN\n\t";
         buf << "Ndot: NaN\n\t";
         buf << "Rate_Crystal_only: NaN\n\t";
-        buf << "Rate_Both: NaN\n";
+        buf << "Rate_Both: NaN\n\t";
+    }
+    if (rate_real_ok) {
+        buf << "Rate_Real: " << rrReal.rateRealCrystal << "\n";
+    } else {
+        buf << "Rate_Real: NaN\n";
+    }
+    buf << "}\n\n";
+
+    buf << "Optical_rates:\n{\n\t";
+    buf << std::fixed << std::setprecision(6);
+    if (rate_opt_ok) {
+        buf << "Area: " << area << "\n\t";
+        buf << "Integral: " << rr_opt.integral << "\n\t";
+        buf << "Ndot: " << rr_opt.Ndot << "\n\t";
+        buf << "Rate_Crystal_only: " << rr_opt.rateCrystal << "\n\t";
+        buf << "Rate_Both: " << rr_opt.rateBoth << "\n\t";
+    } else {
+        buf << "Area: NaN\n\t";
+        buf << "Integral: NaN\n\t";
+        buf << "Ndot: NaN\n\t";
+        buf << "Rate_Crystal_only: NaN\n\t";
+        buf << "Rate_Both: NaN\n\t";
+    }
+    if (rate_real_opt_ok) {
+        buf << "Rate_Real: " << rrReal_opt.rateRealCrystal << "\n";
+    } else {
+        buf << "Rate_Real: NaN\n";
     }
     buf << "}\n\n";
 
@@ -333,12 +447,10 @@ void Loader::SaveConfig() const {
         const std::string part = ReadValue("particle:");
         const std::string phi = ReadValue("phiMV:");
         filename += "_particle:" + part + "_phiMV:" + phi + ".txt";
-        // } else if (fluxType == "SEP") {
-        //     const std::string y = ReadValue("year:");
-        //     const std::string order = ReadValue("order:");
-        //     filename += "_year:" + y + "_order:" + order + ".txt";
-    }
-    else {
+    } else if (fluxType == "Uniform") {
+        const std::string part = ReadValue("particles:");
+        filename += "_particle:" + part + ".txt";
+    } else {
         filename += ".txt";
     }
     filename = sanitize(filename);
@@ -352,4 +464,52 @@ void Loader::SaveConfig() const {
     out.close();
 
     std::cout << "Configuration saved in " << filename << std::endl;
+}
+
+
+void Loader::RunPostProcessing() const {
+    auto sanitize = [](std::string ss) {
+        for (char& c : ss) if (c == ' ') c = '_';
+        return ss;
+    };
+    std::string part;
+
+    G4double Emin = std::max({std::stod(ReadValue("E_min:")), eCrystalThreshold});
+    G4double Emax = std::stod(ReadValue("E_max:"));
+    try {
+        std::cout << "Processing... ";
+        std::string outDir = fluxType;
+        if (fluxType == "Galactic") {
+            const std::string phi = ReadValue("phiMV:");
+            part = ReadValue("particle:");
+            outDir += "_particle:" + part + "_phiMV:" + phi;
+        } else if (fluxType == "Uniform") {
+            part = ReadValue("particles:");
+            outDir += "_particles:" + part;
+        } else if (fluxType == "PLAW" || fluxType == "COMP") {
+            part = "gamma";
+        } else if (fluxType == "SEP") {
+            part = "proton";
+        }
+        outDir = sanitize(outDir);
+        PostProcessing postProcessing(outDir, Emin, Emax, part);
+
+        postProcessing.ExtractNtData();
+        if (Emin < Emax) {
+            if (fluxDirection.find("isotropic") != std::string::npos)
+                postProcessing.SaveSensitivity();
+            else
+                postProcessing.SaveEffArea();
+        }
+        postProcessing.SaveTrigEdepCsv();
+        postProcessing.SaveEdepCsv();
+        if (useOptics) {
+            postProcessing.SaveOpticsCsv();
+        }
+
+        std::cout << "Done!\n";
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+    }
 }

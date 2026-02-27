@@ -239,7 +239,7 @@ void Detector::ConstructTOFFibers() {
 
         for (G4int i = 0; i < rowsX; ++i) {
             const G4double x = -TOFFibers::halfX + marginXBase + TOFFibers::fiberRadius + rowShift + i * step;
-            const G4int copyNo = l * 1000 + i;
+            const G4int copyNo = l * rowsX + i;
             new G4PVPlacement(rotAlongY,
                               G4ThreeVector(x, 0.0, zLayer),
                               fiberCladXLV,
@@ -259,7 +259,7 @@ void Detector::ConstructTOFFibers() {
         }
         for (G4int i = 0; i < rowsY; ++i) {
             const G4double y = -TOFFibers::halfY + marginYBase + TOFFibers::fiberRadius + rowShift + i * step;
-            const G4int copyNo = 50000 + l * 1000 + i;
+            const G4int copyNo = l * rowsY + i;
             new G4PVPlacement(rotAlongX,
                               G4ThreeVector(0.0, y, zLayer),
                               fiberCladYLV,

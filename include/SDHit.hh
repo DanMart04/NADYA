@@ -23,20 +23,22 @@ public:
     G4double tmin = DBL_MAX;
     G4bool isOptical = false;
 
+    // TOF fiber identification (only meaningful for fiber hits)
+    // plane: 0 = X, 1 = Y, -1 = not a fiber hit
+    G4int plane = -1;
+    // module index along Z (0 .. fiberModuleCount-1), -1 if unknown/not fiber
+    G4int module = -1;
+    // layer index inside a module (0 .. fiberLayersPerPlane-1), -1 if unknown/not fiber
+    G4int layer = -1;
+    // fiber index inside a layer (0 .. rowsX/rowsY-1), -1 if unknown/not fiber
+    G4int fiberIndex = -1;
+
     G4double x_loc_mm = 0.0;
     G4double y_loc_mm = 0.0;
     G4double z_loc_mm = 0.0;
     G4double phi = 0.0;
     G4double t_ns = 0.0;
     G4int copyNo = 0;
-    G4String particleName = "unknown";  // НОВОЕ: имя частицы
-    G4int particlePDG = 0;
-    G4int trackID = -1;
-    G4int parentTrackID = -1;
-    G4int fiberModule = -1;
-    G4int fiberLayer = -1;
-    G4int fiberRow = -1;
-    G4String fiberPlane = "";
 
     void AddEdep(G4double);
     void UpdateTmin(G4double t);
