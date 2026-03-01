@@ -96,6 +96,7 @@ int EventAction::WriteInteractions_(int eventID) {
             analysisManager->FillInteractionRow(eventID,
                                                 r.trackID, r.parentID,
                                                 r.process, r.volumeName, r.pos_mm,
+                                                r.t_ns,
                                                 r.secIndex, r.secName,
                                                 r.secE_MeV, r.secDir);
         }

@@ -32,6 +32,7 @@ public:
                             const G4String& process,
                             const G4String& volumeName,
                             const G4ThreeVector& x_mm,
+                            G4double t_ns,
                             G4int secIndex, const G4String& secName,
                             G4double secE_MeV, const G4ThreeVector& secDir);
 

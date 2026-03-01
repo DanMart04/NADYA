@@ -191,6 +191,7 @@ void AnalysisManager::FillInteractionRow(G4int eventID,
                                          const G4String& process,
                                          const G4String& volumeName,
                                          const G4ThreeVector& x_mm,
+                                         G4double t_ns,
                                          G4int secIndex, const G4String& secName,
                                          G4double secE_MeV, const G4ThreeVector& secDir) {
     G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
@@ -202,12 +203,13 @@ void AnalysisManager::FillInteractionRow(G4int eventID,
     analysisManager->FillNtupleDColumn(interactionsNT, 5, x_mm.x());
     analysisManager->FillNtupleDColumn(interactionsNT, 6, x_mm.y());
     analysisManager->FillNtupleDColumn(interactionsNT, 7, x_mm.z());
-    analysisManager->FillNtupleIColumn(interactionsNT, 8, secIndex);
-    analysisManager->FillNtupleSColumn(interactionsNT, 9, secName);
-    analysisManager->FillNtupleDColumn(interactionsNT, 10, secE_MeV);
-    analysisManager->FillNtupleDColumn(interactionsNT, 11, secDir.x());
-    analysisManager->FillNtupleDColumn(interactionsNT, 12, secDir.y());
-    analysisManager->FillNtupleDColumn(interactionsNT, 13, secDir.z());
+    analysisManager->FillNtupleDColumn(interactionsNT, 8, t_ns);
+    analysisManager->FillNtupleIColumn(interactionsNT, 9, secIndex);
+    analysisManager->FillNtupleSColumn(interactionsNT, 10, secName);
+    analysisManager->FillNtupleDColumn(interactionsNT, 11, secE_MeV);
+    analysisManager->FillNtupleDColumn(interactionsNT, 12, secDir.x());
+    analysisManager->FillNtupleDColumn(interactionsNT, 13, secDir.y());
+    analysisManager->FillNtupleDColumn(interactionsNT, 14, secDir.z());
     analysisManager->AddNtupleRow(interactionsNT);
 }
 

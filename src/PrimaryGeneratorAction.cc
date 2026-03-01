@@ -3,7 +3,7 @@
 
 PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String& fluxType, const G4double cThreshold)
     : particleGun(new G4ParticleGun(1)),
-      center(G4ThreeVector(0, 0, -Sizes::Envelope::sizeZ / 2.0)),
+      center(G4ThreeVector(0, 0, 0)),
       detectorHalfSize(G4ThreeVector(0 * mm,
                                      std::max(Sizes::Envelope::halfX, Sizes::Envelope::halfY),
                                      Sizes::Envelope::sizeZ)),
@@ -96,7 +96,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* evt) {
         x = G4ThreeVector(x_, y_, z_);
     } else if (fluxDirection == "vertical_down") {
         v = G4ThreeVector(0., 0., -1.);
-        const G4double r = std::sqrt(G4UniformRand()) * detectorHalfSize.y(); // 1 * mm;
+        const G4double r = std::sqrt(G4UniformRand()) * 18 * mm; // detectorHalfSize.y(); // 1 * mm;
         const G4double phi = G4UniformRand() * 2 * pi;
         const G4double x_ = r * std::cos(phi);
         const G4double y_ = r * std::sin(phi);

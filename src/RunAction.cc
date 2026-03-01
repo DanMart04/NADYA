@@ -3,7 +3,7 @@
 using namespace Configuration;
 
 RunAction::RunAction() {
-    const G4String fileName = "GammaCube.root";
+    const G4String fileName = " NADYA.root";
     analysisManager = new AnalysisManager(fileName);
 
     auto* mgr = G4AccumulableManager::Instance();
