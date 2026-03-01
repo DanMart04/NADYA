@@ -15,7 +15,7 @@ Detector::Detector(G4LogicalVolume* wLV, G4NistManager* nistMan)
 }
 
 void Detector::DefineMaterials() {
-    airMat = nist->FindOrBuildMaterial("G4_AIR");
+    airMat = nist->FindOrBuildMaterial("G4_Galactic");
     tofMat = nist->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
     vetoMat = nist->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
     fiberMat = nist->FindOrBuildMaterial("G4_POLYSTYRENE");
@@ -58,7 +58,7 @@ void Detector::ConstructShellAndContainers() {
     cubeOuterLV = new G4LogicalVolume(instrumentSolid, airMat, "InstrumentLV");
     cubeOuterLV->SetVisAttributes(G4VisAttributes::GetInvisible());
     new G4PVPlacement(nullptr,
-                      G4ThreeVector(0, 0, Envelope::centerZ()),
+                      G4ThreeVector(0, 0, 0),
                       cubeOuterLV,
                       "InstrumentPV",
                       worldLV,
