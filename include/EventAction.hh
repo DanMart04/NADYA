@@ -71,6 +71,11 @@ public:
     void BeginOfEventAction(const G4Event *) override;
     void EndOfEventAction(const G4Event *) override;
 
+    // New trigger: event registered iff signal in all four TOF panels and no signal in AC (Veto/PostCaloAC).
+    [[nodiscard]] bool HasTOFAndNoAC() const {
+        return hasTrigger1Lower && hasTrigger1Upper && hasTrigger2Lower && hasTrigger2Upper && !hasVeto;
+    }
+
 private:
     void WritePrimaries_(int eventID);
     int WriteInteractions_(int eventID);
@@ -103,6 +108,11 @@ private:
     bool hasVeto = false;
     bool hasCrystalOpt = false;
     bool hasVetoOpt = false;
+
+    bool hasTrigger1Lower = false;
+    bool hasTrigger1Upper = false;
+    bool hasTrigger2Lower = false;
+    bool hasTrigger2Upper = false;
 };
 
 #endif //EVENTACTION_HH

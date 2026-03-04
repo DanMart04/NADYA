@@ -34,11 +34,9 @@ G4VPhysicalVolume* Geometry::Construct() {
     trigger2LowerLV = detector->GetTrigger2LowerLV();
     trigger2UpperLV = detector->GetTrigger2UpperLV();
     vetoLV          = detector->GetVetoLV();
+    postCaloACLV    = detector->GetPostCaloACLV();
     coordDetectorLV = detector->GetCoordDetectorLV();
-    copperPlateLV   = detector->GetCopperPlateLV();
     fiberStripLV    = detector->GetFiberStripLV();
-    calorimeterLV   = detector->GetCalorimeterLV();
-    bottomVolumeLV  = detector->GetBottomVolumeLV();
 
     return worldPV;
 }
@@ -76,6 +74,12 @@ void Geometry::ConstructSDandField() {
         vetoLV->SetSensitiveDetector(vetoSD);
     }
 
+    if (postCaloACLV) {
+        auto* postCaloACSD = new SensitiveDetector("PostCaloACSD", 9, "PostCaloAC");
+        sdManager->AddNewDetector(postCaloACSD);
+        postCaloACLV->SetSensitiveDetector(postCaloACSD);
+    }
+
     if (coordDetectorLV) {
         auto* coordSD = new SensitiveDetector("CoordSD", 3, "TOFFibers");
         sdManager->AddNewDetector(coordSD);
@@ -102,9 +106,4 @@ void Geometry::ConstructSDandField() {
         }
     }
 
-    if (bottomVolumeLV) {
-        auto* bottomSD = new SensitiveDetector("BottomSD", 8, "BottomVolume");
-        sdManager->AddNewDetector(bottomSD);
-        bottomVolumeLV->SetSensitiveDetector(bottomSD);
     }
-}

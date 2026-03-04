@@ -240,21 +240,22 @@ double fluxGalactic(const double E, const double phiMV, const std::string& name)
 
 // ---------------- Area ----------------
 
-double Area_cm2(const double R_mm, const double H_mm, const FluxDir dir) {
-    const double R_cm = R_mm / 10.0;
-    const double H_cm = H_mm / 10.0;
+double AreaRect_cm2(const double halfX_mm, const double halfY_mm, const double sizeZ_mm, const FluxDir dir) {
+    const double to_cm2 = 1.0 / 100.0;  // mm^2 -> cm^2
+    const double faceXY = 4.0 * halfX_mm * halfY_mm;
+    const double faceXZ = 2.0 * halfX_mm * sizeZ_mm;
+    const double faceYZ = 2.0 * halfY_mm * sizeZ_mm;
 
     if (dir == FluxDir::Vertical_up || dir == FluxDir::Vertical_down) {
-        return M_PI * R_cm * R_cm;
+        return faceXY * to_cm2;
     }
     if (dir == FluxDir::Horizontal) {
-        return 2 * R_cm * H_cm;
+        return (faceXZ + faceYZ) * to_cm2;
     }
-    const double val = std::sqrt(R_cm * R_cm + H_cm * H_cm) + 0.5;
-    if (dir == FluxDir::Isotropic_down || dir == FluxDir::Isotropic_up) {
-        return 2.0 * M_PI * M_PI * val * val;
-    }
-    return 4.0 * M_PI * M_PI * val * val;
+    // Isotropic: mean projected area = total surface / 4
+    const double totalSurface = 2.0 * (faceXY + faceXZ + faceYZ);
+    const double area = totalSurface / 4.0;
+    return area * to_cm2;
 }
 
 // ---------------- Integral ----------------

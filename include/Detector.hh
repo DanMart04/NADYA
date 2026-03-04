@@ -24,6 +24,7 @@ public:
     // Visual attributes
     G4VisAttributes* visTOF{};
     G4VisAttributes* visVeto{};
+    G4VisAttributes* visPostCaloAC{};
     G4VisAttributes* visCoordDetector{};
     G4VisAttributes* visFiber{};
     G4VisAttributes* visCalorimeter{};
@@ -41,11 +42,9 @@ public:
     [[nodiscard]] G4LogicalVolume* GetTrigger2LowerLV() const { return trigger2LowerLV; }
     [[nodiscard]] G4LogicalVolume* GetTrigger2UpperLV() const { return trigger2UpperLV; }
     [[nodiscard]] G4LogicalVolume* GetVetoLV() const { return vetoLV; }
+    [[nodiscard]] G4LogicalVolume* GetPostCaloACLV() const { return postCaloACLV; }
     [[nodiscard]] G4LogicalVolume* GetCoordDetectorLV() const { return coordDetectorLV; }
-    [[nodiscard]] G4LogicalVolume* GetCopperPlateLV() const { return copperPlateLV; }
     [[nodiscard]] G4LogicalVolume* GetFiberStripLV() const { return fiberCoreLV; }
-    [[nodiscard]] G4LogicalVolume* GetCalorimeterLV() const { return calorimeterLV; }
-    [[nodiscard]] G4LogicalVolume* GetBottomVolumeLV() const { return bottomVolumeLV; }
 
 private:
     G4LogicalVolume* worldLV;
@@ -64,11 +63,9 @@ private:
     G4LogicalVolume* trigger2LowerLV{};
     G4LogicalVolume* trigger2UpperLV{};
     G4LogicalVolume* vetoLV{};
+    G4LogicalVolume* postCaloACLV{};
     G4LogicalVolume* coordDetectorLV{};
-    G4LogicalVolume* copperPlateLV{};
     G4LogicalVolume* fiberCoreLV{};
-    G4LogicalVolume* calorimeterLV{};
-    G4LogicalVolume* bottomVolumeLV{};
 
     // Containers
     G4LogicalVolume* cubeOuterLV{};
@@ -76,6 +73,7 @@ private:
     // Build steps
     void ConstructShellAndContainers();
     void ConstructVeto();
+    void ConstructPostCaloAC();
     void ConstructTOF();
     void ConstructTOFFibers();
     void ConstructCalorimeter();

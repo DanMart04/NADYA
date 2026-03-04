@@ -13,6 +13,7 @@ EventAction::EventAction(AnalysisManager* an, RunAction* r) : analysisManager(an
         {"FiberSD/EdepHits",         5, "FiberY"},
         {"CalorimeterSD/EdepHits",   6, "Crystal"},
         {"Trigger2UpperSD/EdepHits", 7, "Trigger2Upper"},
+        {"PostCaloACSD/EdepHits",    9, "PostCaloAC"},
     };
     HCIDs.assign(detMap.size(), -1);
 }
@@ -23,6 +24,10 @@ void EventAction::BeginOfEventAction(const G4Event*) {
     nEdepHits = 0;
     hasCrystal = false;
     hasVeto = false;
+    hasTrigger1Lower = false;
+    hasTrigger1Upper = false;
+    hasTrigger2Lower = false;
+    hasTrigger2Upper = false;
 }
 
 void EventAction::EndOfEventAction(const G4Event* evt) {
@@ -61,7 +66,7 @@ void EventAction::EndOfEventAction(const G4Event* evt) {
     if (run and hasCrystal && hasVeto) run->AddCrystalAndVeto(1);
 
     if (primaryE_MeV > 0.0) {
-        if (hasCrystal && !hasVeto) {
+        if (HasTOFAndNoAC()) {
             if (run) {
                 run->AddTriggeredCrystalOnly(primaryE_MeV);
             }
@@ -70,7 +75,7 @@ void EventAction::EndOfEventAction(const G4Event* evt) {
 
     if (useOptics) {
         if (primaryE_MeV > 0.0 && analysisManager) {
-            if (hasCrystal && !hasVeto) {
+            if (HasTOFAndNoAC()) {
                 // analysisManager->FillTrigOptEnergyHist(primaryE_MeV, 1.0);
             }
         }
@@ -79,7 +84,7 @@ void EventAction::EndOfEventAction(const G4Event* evt) {
         if (run and hasCrystalOpt && hasVetoOpt) run->AddCrystalAndVetoOpt(1);
 
         if (primaryE_MeV > 0.0) {
-            if (run and hasCrystalOpt && !hasVetoOpt) run->AddTriggeredCrystalOnlyOpt(primaryE_MeV);
+            if (run and HasTOFAndNoAC()) run->AddTriggeredCrystalOnlyOpt(primaryE_MeV);
         }
     }
 }
@@ -148,7 +153,7 @@ int EventAction::WriteEdepFromSD_(const G4Event* evt, int eventID) {
             auto* h = (*hc)[j];
             double edep_MeV = h->edep / MeV;
 
-            if ((det_name == "Veto" or det_name == "BottomVeto") and edep_MeV <= eVetoThreshold) {
+            if ((det_name == "Veto" or det_name == "PostCaloAC") and edep_MeV <= eVetoThreshold) {
                 edep_MeV = 0;
             }
             if (det_name == "Crystal" and edep_MeV <= eCrystalThreshold) {
@@ -157,7 +162,12 @@ int EventAction::WriteEdepFromSD_(const G4Event* evt, int eventID) {
             if (edep_MeV > 0.0) {
                 // For calorimeter/veto bookkeeping
                 if (det_name == "Crystal") MarkCrystal();
-                else if (det_name == "Veto" or det_name == "BottomVeto") MarkVeto();
+                else if (det_name == "Veto" or det_name == "PostCaloAC") MarkVeto();
+                // Four TOF trigger panels (new trigger: all four + no AC)
+                else if (det_name == "Trigger1Lower") hasTrigger1Lower = true;
+                else if (det_name == "Trigger1Upper") hasTrigger1Upper = true;
+                else if (det_name == "Trigger2Lower") hasTrigger2Lower = true;
+                else if (det_name == "Trigger2Upper") hasTrigger2Upper = true;
 
                 // Per-fiber ntuple: only for TOF fibers where metadata is available.
                 if (analysisManager &&

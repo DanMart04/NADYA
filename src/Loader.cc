@@ -129,10 +129,7 @@ Loader::Loader(int argc, char** argv) {
     } else if (fluxDirection == "horizontal") {
         dir = FluxDir::Horizontal;
     }
-
-    const double R_mm = std::max(Sizes::Envelope::halfX, Sizes::Envelope::halfY);
-    const double H_mm = Sizes::Envelope::sizeZ;
-    area = Area_cm2(R_mm, H_mm, dir);
+    area = AreaRect_cm2(Sizes::VetoAC::innerHalfX, Sizes::VetoAC::innerHalfY, Sizes::Envelope::sizeZ, dir);
     runManager->SetUserInitialization(new ActionInitialization(area, EminMeV, EmaxMeV));
     runManager->Initialize();
 
@@ -161,7 +158,7 @@ Loader::Loader(int argc, char** argv) {
         crystalAndVetoOpt = cAndVOpt;
         effAreaOpt = runAction->GetEffAreaOpt();
     }
-    // SaveConfig();
+    SaveConfig();
     // RunPostProcessing();
 }
 

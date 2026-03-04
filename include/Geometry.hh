@@ -40,11 +40,9 @@ private:
     G4LogicalVolume* trigger2LowerLV{};
     G4LogicalVolume* trigger2UpperLV{};
     G4LogicalVolume* vetoLV{};
+    G4LogicalVolume* postCaloACLV{};
     G4LogicalVolume* coordDetectorLV{};
-    G4LogicalVolume* copperPlateLV{};
     G4LogicalVolume* fiberStripLV{};
-    G4LogicalVolume* calorimeterLV{};
-    G4LogicalVolume* bottomVolumeLV{};
 };
 
 #endif // GEOMETRY_HH

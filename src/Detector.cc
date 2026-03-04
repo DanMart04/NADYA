@@ -30,6 +30,9 @@ void Detector::DefineVisual() {
     visVeto = new G4VisAttributes(G4Color(1.0, 0.0, 0.0, 0.55));
     visVeto->SetForceSolid(true);
 
+    visPostCaloAC = new G4VisAttributes(G4Color(1.0, 0.5, 0.0, 0.55));
+    visPostCaloAC->SetForceSolid(true);
+
     visCoordDetector = new G4VisAttributes(G4Color(0.0, 0.5, 1.0, 0.8));
     visCoordDetector->SetForceSolid(true);
 
@@ -43,6 +46,7 @@ void Detector::DefineVisual() {
 void Detector::Construct() {
     ConstructShellAndContainers();
     ConstructVeto();
+    ConstructPostCaloAC();
     ConstructTOF();
     ConstructTOFFibers();
     ConstructCalorimeter();
@@ -88,6 +92,27 @@ void Detector::ConstructVeto() {
                       G4ThreeVector(0, 0, ZInInstrument(VetoAC::centerZ())),
                       vetoLV,
                       "ACShellPV",
+                      cubeOuterLV,
+                      false,
+                      0,
+                      checkOverlaps);
+}
+
+void Detector::ConstructPostCaloAC() {
+    const G4bool checkOverlaps = true;
+
+    auto* acSolid = new G4Box("PostCaloACBox",
+                              PostCaloAC::outerHalfX,
+                              PostCaloAC::outerHalfY,
+                              PostCaloAC::height() / 2.0);
+
+    postCaloACLV = new G4LogicalVolume(acSolid, vetoMat, "PostCaloACShellLV");
+    postCaloACLV->SetVisAttributes(visPostCaloAC);
+
+    new G4PVPlacement(nullptr,
+                      G4ThreeVector(0, 0, ZInInstrument(PostCaloAC::centerZ())),
+                      postCaloACLV,
+                      "PostCaloACShellPV",
                       cubeOuterLV,
                       false,
                       0,
@@ -323,10 +348,6 @@ void Detector::ConstructCalorimeter() {
                               false,
                               ix * 10 + iy,
                               checkOverlaps);
-
-            if (ix == 0 && iy == 0) {
-                calorimeterLV = crystalLV;
-            }
         }
     }
 }

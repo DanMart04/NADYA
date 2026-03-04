@@ -68,7 +68,8 @@ double J_proton(double E_GeV);
 
 enum class FluxDir { Vertical_down, Vertical_up, Horizontal, Isotropic_up, Isotropic_down, Isotropic };
 
-double Area_cm2(double R_mm, double H_mm, FluxDir dir);
+/** Area in cm^2 for a rectangular envelope: halfX_mm, halfY_mm (half extents), sizeZ_mm (full height). */
+double AreaRect_cm2(double halfX_mm, double halfY_mm, double sizeZ_mm, FluxDir dir);
 
 double integrateAdaptiveSimpson(const std::function<double(double)>& f,
                                 double a, double b,

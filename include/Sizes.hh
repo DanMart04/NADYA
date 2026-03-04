@@ -22,10 +22,23 @@ namespace Sizes
 
     namespace Stack {
         const G4double caloBottomZ = 0.0 * mm;
+        const G4double gapPostCaloACToCalo = 0.0 * mm;
         const G4double gapCaloToTrigger2 = 0.0 * mm;
         const G4double gapTrigger2ToFiber = 0.0 * mm;
         const G4double gapFiberToTrigger1 = 0.0 * mm;
         const G4double gapInsideTriggerPair = 0.0 * mm;
+    }
+
+    namespace PostCaloAC {
+        const G4double outerHalfX = 25.0 * mm;
+        const G4double outerHalfY = 25.0 * mm;
+        const G4double thickness = 7.0 * mm;
+        const G4double innerHalfX = outerHalfX - thickness;
+        const G4double innerHalfY = outerHalfY - thickness;
+        const G4double bottomZ = Stack::caloBottomZ;
+        const G4double topZ = bottomZ + thickness;
+        inline G4double height() { return topZ - bottomZ; }
+        inline G4double centerZ() { return (topZ + bottomZ) / 2.0; }
     }
 
     namespace Calorimeter {
@@ -35,7 +48,7 @@ namespace Sizes
         const G4int rowsX = 2;
         const G4int rowsY = 2;
         const G4double gap = 0.0 * mm;
-        const G4double bottomZ = Stack::caloBottomZ;
+        const G4double bottomZ = PostCaloAC::topZ + Stack::gapPostCaloACToCalo;
         const G4double topZ = bottomZ + crystalHeight;
         inline G4double centerZ() { return (topZ + bottomZ) / 2.0; }
         inline G4double totalWidth() { return rowsX * crystalWidth + (rowsX - 1) * gap; }
@@ -68,7 +81,7 @@ namespace Sizes
         const G4double panelSizeY = segmentCount * stripWidth;
         const G4double halfX = panelSizeX / 2.0;
         const G4double halfY = panelSizeY / 2.0;
-        const G4double panelThickness = 7.0 * mm;
+        const G4double panelThickness = 6.0 * mm;
 
         const G4double pair2LowerBottomZ = Calorimeter::topZ + Stack::gapCaloToTrigger2;
         const G4double pair2LowerTopZ = pair2LowerBottomZ + panelThickness;
@@ -123,7 +136,7 @@ namespace Sizes
         const G4double marginZ = 0.0 * mm;
         const G4double halfX = std::max(50.0 * mm, VetoAC::outerHalfX + marginXY);
         const G4double halfY = std::max(50.0 * mm, VetoAC::outerHalfY + marginXY);
-        const G4double bottomZ = Calorimeter::bottomZ - marginZ;
+        const G4double bottomZ = PostCaloAC::bottomZ - marginZ;
         const G4double topZ = std::max(Trigger::pair1UpperTopZ, VetoAC::topZ) + marginZ;
         const G4double sizeZ = topZ - bottomZ;
         const G4double halfZ = sizeZ / 2.0;
