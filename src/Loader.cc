@@ -129,7 +129,12 @@ Loader::Loader(int argc, char** argv) {
     } else if (fluxDirection == "horizontal") {
         dir = FluxDir::Horizontal;
     }
-    area = AreaRect_cm2(Sizes::VetoAC::innerHalfX, Sizes::VetoAC::innerHalfY, Sizes::Envelope::sizeZ, dir);
+    {
+        const double halfY_mm = static_cast<double>(std::max(Sizes::Envelope::halfX, Sizes::Envelope::halfY));
+        const double sizeZ_mm = static_cast<double>(Sizes::Envelope::sizeZ);
+        const double radius_mm = std::sqrt(halfY_mm * halfY_mm + sizeZ_mm * sizeZ_mm) + 5.0;
+        area = AreaGen_cm2(halfY_mm, sizeZ_mm, radius_mm, radius_mm, dir);
+    }
     runManager->SetUserInitialization(new ActionInitialization(area, EminMeV, EmaxMeV));
     runManager->Initialize();
 
@@ -166,7 +171,6 @@ Loader::~Loader() {
     delete runManager;
     delete visManager;
 }
-
 
 std::string Loader::ReadValue(const std::string& key, const std::string& filepath = "") const {
     std::ifstream file(filepath.empty() ? configPath : filepath);

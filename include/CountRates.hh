@@ -71,6 +71,12 @@ enum class FluxDir { Vertical_down, Vertical_up, Horizontal, Isotropic_up, Isotr
 /** Area in cm^2 for a rectangular envelope: halfX_mm, halfY_mm (half extents), sizeZ_mm (full height). */
 double AreaRect_cm2(double halfX_mm, double halfY_mm, double sizeZ_mm, FluxDir dir);
 
+/** Area in cm^2 of the surface from which primaries are launched (same geometry as PrimaryGeneratorAction).
+ *  halfY_mm = max(halfX, halfY) of envelope, sizeZ_mm = envelope full height,
+ *  radiusVerticalDown_mm = circle radius for vertical_down, radiusSphere_mm = sphere radius for isotropic. */
+double AreaGen_cm2(double halfY_mm, double sizeZ_mm, double radiusVerticalDown_mm, double radiusSphere_mm, FluxDir dir);
+
+
 double integrateAdaptiveSimpson(const std::function<double(double)>& f,
                                 double a, double b,
                                 double rel_tol = 1e-6, int max_depth = 20);
