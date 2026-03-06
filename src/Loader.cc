@@ -164,7 +164,6 @@ Loader::Loader(int argc, char** argv) {
         effAreaOpt = runAction->GetEffAreaOpt();
     }
     SaveConfig();
-    // RunPostProcessing();
 }
 
 Loader::~Loader() {
@@ -465,52 +464,4 @@ void Loader::SaveConfig() const {
     out.close();
 
     std::cout << "Configuration saved in " << filename << std::endl;
-}
-
-
-void Loader::RunPostProcessing() const {
-    auto sanitize = [](std::string ss) {
-        for (char& c : ss) if (c == ' ') c = '_';
-        return ss;
-    };
-    std::string part;
-
-    G4double Emin = std::max({std::stod(ReadValue("E_min:")), eCrystalThreshold});
-    G4double Emax = std::stod(ReadValue("E_max:"));
-    try {
-        std::cout << "Processing... ";
-        std::string outDir = fluxType;
-        if (fluxType == "Galactic") {
-            const std::string phi = ReadValue("phiMV:");
-            part = ReadValue("particle:");
-            outDir += "_particle:" + part + "_phiMV:" + phi;
-        } else if (fluxType == "Uniform") {
-            part = ReadValue("particles:");
-            outDir += "_particles:" + part;
-        } else if (fluxType == "PLAW" || fluxType == "COMP") {
-            part = "gamma";
-        } else if (fluxType == "SEP") {
-            part = "proton";
-        }
-        outDir = sanitize(outDir);
-        PostProcessing postProcessing(outDir, Emin, Emax, part);
-
-        postProcessing.ExtractNtData();
-        if (Emin < Emax) {
-            if (fluxDirection.find("isotropic") != std::string::npos)
-                postProcessing.SaveSensitivity();
-            else
-                postProcessing.SaveEffArea();
-        }
-        postProcessing.SaveTrigEdepCsv();
-        postProcessing.SaveEdepCsv();
-        if (useOptics) {
-            postProcessing.SaveOpticsCsv();
-        }
-
-        std::cout << "Done!\n";
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-    }
 }
