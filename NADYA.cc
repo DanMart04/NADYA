@@ -7,7 +7,7 @@
 
 #include "Sizes.hh"
 #include "Configuration.hh"
-#include "Geometry.hh"
+#include "DetectorConstruction.hh"
 #include "PhysicsList.hh"
 #include "ActionInitialization.hh"
 #include "RunAction.hh"
@@ -397,7 +397,7 @@ int main(int argc, char **argv) {
 #endif
 
     // Геометрия
-    runManager->SetUserInitialization(new Geometry());
+    runManager->SetUserInitialization(new DetectorConstruction());
     // Физика
     runManager->SetUserInitialization(new PhysicsList(useOptics));
 

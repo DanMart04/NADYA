@@ -1,6 +1,4 @@
-#ifndef GEOMETRY_HH
-#define GEOMETRY_HH
-
+#pragma once
 #include <G4VUserDetectorConstruction.hh>
 #include <G4LogicalVolume.hh>
 #include <G4VPhysicalVolume.hh>
@@ -17,10 +15,10 @@
 #include "SensitiveDetector.hh"
 #include "Sizes.hh"
 
-class Geometry : public G4VUserDetectorConstruction {
+class DetectorConstruction : public G4VUserDetectorConstruction {
 public:
-    Geometry();
-    ~Geometry() override = default;
+    DetectorConstruction();
+    ~DetectorConstruction() override = default;
 
     G4VPhysicalVolume* Construct() override;
     void ConstructSDandField() override;
@@ -44,5 +42,3 @@ private:
     G4LogicalVolume* coordDetectorLV{};
     G4LogicalVolume* fiberStripLV{};
 };
-
-#endif // GEOMETRY_HH

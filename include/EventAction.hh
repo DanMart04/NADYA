@@ -13,7 +13,7 @@
 #include <cfloat>
 #include <vector>
 
-#include "Geometry.hh"
+#include "DetectorConstruction.hh"
 #include "RunAction.hh"
 #include "Sizes.hh"
 #include "Configuration.hh"
@@ -22,7 +22,7 @@
 #include "SiPMOpticalSD.hh"
 
 class G4Event;
-class Geometry;
+class DetectorConstruction;
 
 struct PrimaryRec {
     int index = 0;

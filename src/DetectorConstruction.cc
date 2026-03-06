@@ -1,12 +1,12 @@
-#include "Geometry.hh"
+#include "DetectorConstruction.hh"
 
 using namespace Sizes;
 
-Geometry::Geometry() {
+DetectorConstruction::DetectorConstruction() {
     nist = G4NistManager::Instance();
 }
 
-G4VPhysicalVolume* Geometry::Construct() {
+G4VPhysicalVolume* DetectorConstruction::Construct() {
     worldMat = nist->FindOrBuildMaterial("G4_Galactic");
 
     const G4double maxR = std::max(Envelope::halfX, Envelope::halfY);
@@ -41,7 +41,7 @@ G4VPhysicalVolume* Geometry::Construct() {
     return worldPV;
 }
 
-void Geometry::ConstructSDandField() {
+void DetectorConstruction::ConstructSDandField() {
     auto* sdManager = G4SDManager::GetSDMpointer();
 
     if (trigger1LowerLV) {
@@ -105,5 +105,4 @@ void Geometry::ConstructSDandField() {
             }
         }
     }
-
-    }
+}

@@ -20,7 +20,7 @@
 #include <utility>
 
 #include "EventAction.hh"
-#include "Geometry.hh"
+#include "DetectorConstruction.hh"
 #include "Flux/Flux.hh"
 #include "Flux/UniformFlux.hh"
 #include "Flux/PLAWFlux.hh"
