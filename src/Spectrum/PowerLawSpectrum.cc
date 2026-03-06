@@ -1,7 +1,6 @@
-#include "Flux/PLAWFlux.hh"
+#include "Spectrum/PowerLawSpectrum.hh"
 
-
-PLAWFlux::PLAWFlux(const G4double cThreshold) {
+PowerLawSpectrum::PowerLawSpectrum(const G4double cThreshold) {
     particle = "gamma";
 
     configFile = "../Flux_config/PLAW_params.txt";
@@ -11,8 +10,7 @@ PLAWFlux::PLAWFlux(const G4double cThreshold) {
     Emax = GetParam(configFile, "E_max", 100.) * MeV;
 }
 
-
-double PLAWFlux::SampleEnergy() {
+double PowerLawSpectrum::SampleEnergy() {
     double u = G4UniformRand();
     if (std::abs(alpha - 1.0) < 1e-12) {
         return Emin * std::pow(Emax / Emin, u);

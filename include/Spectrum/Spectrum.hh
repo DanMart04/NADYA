@@ -1,5 +1,4 @@
-#ifndef FLUX_HH
-#define FLUX_HH
+#pragma once
 
 #include <CLHEP/Units/SystemOfUnits.h>
 #include "G4ParticleTable.hh"
@@ -20,10 +19,9 @@ struct ParticleInfo {
     G4double energy;
 };
 
-
-class Flux {
+class Spectrum {
 public:
-    virtual ~Flux() = default;
+    virtual ~Spectrum() = default;
 
     virtual ParticleInfo GenerateParticle();
 
@@ -49,6 +47,3 @@ private:
 
     void LoadFileIfNeeded(const G4String &);
 };
-
-
-#endif //FLUX_HH

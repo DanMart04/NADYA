@@ -1,6 +1,5 @@
 #include "PrimaryGeneratorAction.hh"
 
-
 PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String& fluxType, const G4double cThreshold)
     : particleGun(new G4ParticleGun(1)),
       center(G4ThreeVector(0, 0, 0)),
@@ -20,31 +19,29 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String& fl
     if (std::find(fluxDirList.begin(), fluxDirList.end(), fluxDirection) == fluxDirList.end()) {
         G4Exception("PrimaryGeneratorAction::GeneratePrimaries", "FluxDirection", FatalException,
                     ("Flux direction is not implemented: " + fluxDirection +
-                        ".\nAvailable flux directions: isotropic, isotropic_up, isotropic_down, vertical_up," +
+                        ".\nAvailable spectrum directions: isotropic, isotropic_up, isotropic_down, vertical_up," +
                         " vertical_down, horizontal").c_str());
     }
     std::vector<G4String> fluxTypeList = {"Uniform", "PLAW", "Table"};
     if (std::find(fluxTypeList.begin(), fluxTypeList.end(), fluxType) == fluxTypeList.end()) {
         G4Exception("PrimaryGeneratorAction::GeneratePrimaries", "FluxType", FatalException,
-                    ("Flux type not found: " + fluxType + ".\nAvailable flux types: Uniform, PLAW, Table")
+                    ("Flux type not found: " + fluxType + ".\nAvailable spectrum types: Uniform, PLAW, Table")
                     .
                     c_str());
     }
 
     if (fluxType == "Uniform") {
-        flux = new UniformFlux(eCrystalThreshold);
+        spectrum = new UniformSpectrum(eCrystalThreshold);
     } else if (fluxType == "PLAW") {
-        flux = new PLAWFlux(eCrystalThreshold);
+        spectrum = new PowerLawSpectrum(eCrystalThreshold);
     } else if (fluxType == "Table") {
-        flux = new TableFlux(eCrystalThreshold);
+        spectrum = new TableSpectrum(eCrystalThreshold);
     }
 }
-
 
 PrimaryGeneratorAction::~PrimaryGeneratorAction() {
     delete particleGun;
 }
-
 
 void PrimaryGeneratorAction::GenerateOnSphere(G4ThreeVector& pos, G4ThreeVector& dir) const {
     G4double u = 0;
@@ -77,7 +74,6 @@ void PrimaryGeneratorAction::GenerateOnSphere(G4ThreeVector& pos, G4ThreeVector&
     dir = dir.unit();
 }
 
-
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* evt) {
     G4ThreeVector x, v;
     if (fluxDirection == "vertical_up") {
@@ -105,7 +101,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* evt) {
     } else {
         GenerateOnSphere(x, v);
     }
-    ParticleInfo info = flux->GenerateParticle();
+    ParticleInfo info = spectrum->GenerateParticle();
 
     particleGun->SetParticleDefinition(info.def);
     particleGun->SetParticleEnergy(info.energy);

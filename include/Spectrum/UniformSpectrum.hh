@@ -1,11 +1,10 @@
-#ifndef UNIFORMFLUX_HH
-#define UNIFORMFLUX_HH
+#pragma once
 
-#include "Flux.hh"
+#include "Spectrum.hh"
 
-class UniformFlux : public Flux {
+class UniformSpectrum : public Spectrum {
 public:
-    explicit UniformFlux(G4double cThreshold);
+    explicit UniformSpectrum(G4double cThreshold);
 
 private:
     std::vector<G4String> particles;
@@ -20,6 +19,3 @@ private:
 
     G4double SampleEnergy() override;
 };
-
-
-#endif //UNIFORMFLUX_HH

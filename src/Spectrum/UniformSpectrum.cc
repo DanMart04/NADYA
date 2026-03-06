@@ -1,7 +1,6 @@
-#include "Flux/UniformFlux.hh"
+#include "Spectrum/UniformSpectrum.hh"
 
-
-UniformFlux::UniformFlux(G4double cThreshold) : eCrystalThreshold(cThreshold) {
+UniformSpectrum::UniformSpectrum(G4double cThreshold) : eCrystalThreshold(cThreshold) {
     const G4String filepath = "../Flux_config/Uniform_params.txt";
 
     const G4String particleLine = GetParam(filepath, "particles", "");
@@ -17,7 +16,7 @@ UniformFlux::UniformFlux(G4double cThreshold) : eCrystalThreshold(cThreshold) {
     const size_t n = particles.size();
 
     if (fractions.size() != n || EminVec.size() != n || EmaxVec.size() != n) {
-        G4Exception("UniformFlux::UniformFlux", "BAD_CONFIG",
+        G4Exception("UniformSpectrum::UniformSpectrum", "BAD_CONFIG",
                     JustWarning, "Configuration lists have mismatched lengths. Using equal fractions.");
         fractions.assign(n, 1.0 / std::max<size_t>(1, n));
     }
@@ -27,8 +26,7 @@ UniformFlux::UniformFlux(G4double cThreshold) : eCrystalThreshold(cThreshold) {
     for (auto &f: fractions) f /= sum;
 }
 
-
-std::vector<G4String> UniformFlux::Split(const G4String &line) {
+std::vector<G4String> UniformSpectrum::Split(const G4String &line) {
     std::vector<G4String> result;
     std::stringstream ss(line);
     G4String token;
@@ -40,8 +38,7 @@ std::vector<G4String> UniformFlux::Split(const G4String &line) {
     return result;
 }
 
-
-size_t UniformFlux::SampleIndex() const {
+size_t UniformSpectrum::SampleIndex() const {
     const double r = G4UniformRand();
     double cumulative = 0.0;
     for (size_t i = 0; i < fractions.size(); ++i) {
@@ -51,8 +48,7 @@ size_t UniformFlux::SampleIndex() const {
     return fractions.size() - 1;
 }
 
-
-std::vector<G4double> UniformFlux::ParseDoubles(const G4String &line) {
+std::vector<G4double> UniformSpectrum::ParseDoubles(const G4String &line) {
     std::vector<G4double> result;
     std::stringstream ss(line);
     G4String token;
@@ -69,7 +65,7 @@ std::vector<G4double> UniformFlux::ParseDoubles(const G4String &line) {
     return result;
 }
 
-G4double UniformFlux::SampleEnergy() {
+G4double UniformSpectrum::SampleEnergy() {
     const size_t idx = SampleIndex();
     Emin = std::max({EminVec[idx] * MeV, eCrystalThreshold});
     Emax = EmaxVec[idx] * MeV;

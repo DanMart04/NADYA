@@ -1,6 +1,6 @@
-#include "Flux/Flux.hh"
+#include "Spectrum/Spectrum.hh"
 
-ParticleInfo Flux::GenerateParticle() {
+ParticleInfo Spectrum::GenerateParticle() {
     auto *pt = G4ParticleTable::GetParticleTable();
 
     ParticleInfo info;
@@ -11,14 +11,14 @@ ParticleInfo Flux::GenerateParticle() {
     return info;
 }
 
-G4String Flux::Trim(const G4String &_s) {
+G4String Spectrum::Trim(const G4String &_s) {
     const size_t start = _s.find_first_not_of(" \t\r\n");
     if (start == G4String::npos) return "";
     const size_t end = _s.find_last_not_of(" \t\r\n");
     return _s.substr(start, end - start + 1);
 }
 
-void Flux::LoadFileIfNeeded(const G4String &filepath) {
+void Spectrum::LoadFileIfNeeded(const G4String &filepath) {
     std::ifstream fin(filepath);
     if (!fin.is_open()) {
         G4Exception("FluxBase::loadFileIfNeeded", "FILE_OPEN_FAIL",
@@ -41,7 +41,7 @@ void Flux::LoadFileIfNeeded(const G4String &filepath) {
     fin.close();
 }
 
-G4double Flux::GetParam(const G4String &filepath,
+G4double Spectrum::GetParam(const G4String &filepath,
                         const G4String &key,
                         G4double defaultValue) {
     LoadFileIfNeeded(filepath);
@@ -54,7 +54,7 @@ G4double Flux::GetParam(const G4String &filepath,
     return defaultValue;
 }
 
-G4String Flux::GetParam(const G4String &filepath,
+G4String Spectrum::GetParam(const G4String &filepath,
                         const G4String &key,
                         const G4String &defaultValue) {
     LoadFileIfNeeded(filepath);

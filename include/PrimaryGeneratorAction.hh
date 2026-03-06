@@ -1,5 +1,4 @@
-#ifndef PRMIARYGENERATIONACTION_HH
-#define PRMIARYGENERATIONACTION_HH
+#pragma once
 
 #include <G4VUserPrimaryGeneratorAction.hh>
 #include <G4ParticleGun.hh>
@@ -21,10 +20,10 @@
 
 #include "EventAction.hh"
 #include "DetectorConstruction.hh"
-#include "Flux/Flux.hh"
-#include "Flux/UniformFlux.hh"
-#include "Flux/PLAWFlux.hh"
-#include "Flux/TableFlux.hh"
+#include "Spectrum/Spectrum.hh"
+#include "Spectrum/UniformSpectrum.hh"
+#include "Spectrum/PowerLawSpectrum.hh"
+#include "Spectrum/TableSpectrum.hh"
 
 class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction {
 public:
@@ -43,11 +42,9 @@ private:
     G4String fluxDirection;
     ParticleInfo pInfo{};
 
-    Flux *flux;
+    Spectrum* spectrum;
 
     G4double eCrystalThreshold;
 
     void GenerateOnSphere(G4ThreeVector &pos, G4ThreeVector &dir) const;
 };
-
-#endif //PRMIARYGENERATIONACTION_HH

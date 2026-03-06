@@ -1,5 +1,4 @@
-#ifndef TABLEFLUX_HH
-#define TABLEFLUX_HH
+#pragma once
 
 #include <vector>
 #include <string>
@@ -14,16 +13,16 @@
 #include <G4SystemOfUnits.hh>
 #include <Randomize.hh>
 
-#include "Flux/Flux.hh"
+#include "Spectrum/Spectrum.hh"
 
 struct Row {
     double E_MeV;
     double flux;
 };
 
-class TableFlux : public Flux {
+class TableSpectrum : public Spectrum {
 public:
-    explicit TableFlux(G4double cThreshold);
+    explicit TableSpectrum(G4double cThreshold);
 
 private:
     G4String path;
@@ -35,6 +34,3 @@ private:
 
     G4double SampleEnergy() override;
 };
-
-
-#endif //TABLEFLUX_HH

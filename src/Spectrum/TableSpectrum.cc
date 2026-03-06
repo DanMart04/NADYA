@@ -1,7 +1,6 @@
-#include "Flux/TableFlux.hh"
+#include "Spectrum/TableSpectrum.hh"
 
-
-TableFlux::TableFlux(const G4double cThreshold) {
+TableSpectrum::TableSpectrum(const G4double cThreshold) {
     configFile = "../Flux_config/Table_params.txt";
     path = GetParam(configFile, "table_path", "../TableSpectrum/flare_M2.csv");
     particle = GetParam(configFile, "particle", "proton");
@@ -12,7 +11,6 @@ TableFlux::TableFlux(const G4double cThreshold) {
     BuildCDF();
 }
 
-
 inline std::vector<G4double> ExtractNumbers(const std::string &line) {
     static const std::regex re(R"(([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?))");
     std::vector<G4double> out;
@@ -22,12 +20,12 @@ inline std::vector<G4double> ExtractNumbers(const std::string &line) {
     return out;
 }
 
-void TableFlux::BuildCDF() {
+void TableSpectrum::BuildCDF() {
     EList.clear();
     CDF.clear();
 
     if (path.empty()) {
-        G4Exception("TableFlux::BuildCDF", "NO_PATH",
+        G4Exception("TableSpectrum::BuildCDF", "NO_PATH",
                     JustWarning, "CSV path is empty. Using trivial 2-point spectrum.");
         EList = {1. * MeV, 10. * MeV};
         CDF = {0.0, 1.0};
@@ -36,7 +34,7 @@ void TableFlux::BuildCDF() {
 
     std::ifstream in(path.c_str());
     if (!in) {
-        G4Exception("TableFlux::BuildCDF", "CSV_OPEN_FAIL",
+        G4Exception("TableSpectrum::BuildCDF", "CSV_OPEN_FAIL",
                     JustWarning, ("Cannot open " + path + ", using trivial spectrum.").c_str());
         EList = {1. * MeV, 10. * MeV};
         CDF = {0.0, 1.0};
@@ -58,7 +56,7 @@ void TableFlux::BuildCDF() {
     in.close();
 
     if (rows.size() < 2) {
-        G4Exception("TableFlux::BuildCDF", "CSV_NO_ROWS",
+        G4Exception("TableSpectrum::BuildCDF", "CSV_NO_ROWS",
                     JustWarning, "Not enough data rows (need >=2). Using trivial spectrum.");
         EList = {1. * MeV, 10. * MeV};
         CDF = {0.0, 1.0};
@@ -85,7 +83,7 @@ void TableFlux::BuildCDF() {
     G4double hi = std::min(Emax, dataEmax);
 
     if (!(hi > lo)) {
-        G4Exception("TableFlux::BuildCDF", "CSV_RANGE_INVALID",
+        G4Exception("TableSpectrum::BuildCDF", "CSV_RANGE_INVALID",
                     JustWarning, "Invalid Emin/Emax vs data range, falling back to data bounds.");
         lo = dataEmin;
         hi = dataEmax;
@@ -131,7 +129,7 @@ void TableFlux::BuildCDF() {
     }
 
     if (Es.size() < 2) {
-        G4Exception("TableFlux::BuildCDF", "CSV_RANGE_TOO_NARROW",
+        G4Exception("TableSpectrum::BuildCDF", "CSV_RANGE_TOO_NARROW",
                     JustWarning, "Energy range too narrow (fewer than 2 points). Using trivial spectrum.");
         EList = {1. * MeV, 10. * MeV};
         CDF = {0.0, 1.0};
@@ -168,7 +166,7 @@ void TableFlux::BuildCDF() {
     CDF.back() = 1.0;
 }
 
-G4double TableFlux::SampleEnergy() {
+G4double TableSpectrum::SampleEnergy() {
     if (EList.size() < 2) return 1.0 * MeV;
 
     const G4double u = G4UniformRand();
