@@ -2,19 +2,13 @@
 #include <G4UIExecutive.hh>
 #include <G4VisManager.hh>
 #include <G4VisExecutive.hh>
-#include <G4UImanager.hh>
-#include <FTFP_BERT.hh>
-#include <G4EmStandardPhysics_option4.hh>
-#include <G4OpticalPhysics.hh>
-#include <G4OpticalParameters.hh>
-#include <G4StepLimiterPhysics.hh>
-#include <G4RadioactiveDecayPhysics.hh>
 #include <Randomize.hh>
 #include <CLHEP/Random/RanecuEngine.h>
 
-#include "Geometry.hh"
 #include "Sizes.hh"
 #include "Configuration.hh"
+#include "Geometry.hh"
+#include "PhysicsList.hh"
 #include "ActionInitialization.hh"
 #include "RunAction.hh"
 #include "CountRates.hh"
@@ -403,29 +397,9 @@ int main(int argc, char **argv) {
 #endif
 
     // Геометрия
-    Geometry* geometry = new Geometry();
-    runManager->SetUserInitialization(geometry);
-
+    runManager->SetUserInitialization(new Geometry());
     // Физика
-    FTFP_BERT* physicsList = new FTFP_BERT();
-    physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
-    physicsList->ReplacePhysics(new G4RadioactiveDecayPhysics());
-
-    if (useOptics) {
-        G4OpticalPhysics* opticalPhysics = new G4OpticalPhysics();
-        G4OpticalParameters* op = G4OpticalParameters::Instance();
-        op->SetProcessActivation("Cerenkov", true);
-        op->SetProcessActivation("Scintillation", true);
-        op->SetProcessActivation("OpAbsorption", true);
-        op->SetProcessActivation("OpRayleigh", true);
-        op->SetProcessActivation("OpMieHG", true);
-        op->SetProcessActivation("OpBoundary", true);
-        op->SetScintTrackSecondariesFirst(true);
-        op->SetCerenkovTrackSecondariesFirst(false);
-        physicsList->RegisterPhysics(opticalPhysics);
-    }
-    physicsList->RegisterPhysics(new G4StepLimiterPhysics());
-    runManager->SetUserInitialization(physicsList);
+    runManager->SetUserInitialization(new PhysicsList(useOptics));
 
     // Чтение границ энергий из файла параметров потока
     G4double EminMeV = std::max(std::stod(ReadValue("E_min:", configPath)) * MeV,
