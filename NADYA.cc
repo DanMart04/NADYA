@@ -82,27 +82,6 @@ namespace {
             fp.E_piv = std::stod(ReadValue("E_Piv:", configPath));
             er.Emin = std::stod(ReadValue("E_min:", configPath));
             er.Emax = std::stod(ReadValue("E_max:", configPath));
-        } else if (fluxType == "COMP") {
-            fType = FluxType::COMP;
-            fp.A = std::stod(ReadValue("A:", configPath));
-            fp.alpha = std::stod(ReadValue("alpha:", configPath));
-            fp.E_piv = std::stod(ReadValue("E_Piv:", configPath));
-            fp.E_peak = std::stod(ReadValue("E_Peak:", configPath));
-            er.Emin = std::stod(ReadValue("E_min:", configPath));
-            er.Emax = std::stod(ReadValue("E_max:", configPath));
-        } else if (fluxType == "SEP") {
-            fType = FluxType::SEP;
-            fp.sep_year = std::stoi(ReadValue("year:", configPath));
-            fp.sep_order = std::stoi(ReadValue("order:", configPath));
-            fp.sep_csv_path = "../SEP_coefficients.CSV";
-            er.Emin = std::stod(ReadValue("E_min:", configPath));
-            er.Emax = std::stod(ReadValue("E_max:", configPath));
-        } else if (fluxType == "Galactic") {
-            fType = FluxType::GALACTIC;
-            fp.phiMV = std::stod(ReadValue("phiMV:", configPath));
-            fp.particle = ReadValue("particle:", configPath);
-            er.Emin = std::stod(ReadValue("E_min:", configPath));
-            er.Emax = std::stod(ReadValue("E_max:", configPath));
         } else if (fluxType == "Table") {
             fType = FluxType::TABLE;
             fp.particle = ReadValue("particle:", configPath);
@@ -165,17 +144,6 @@ namespace {
             buf << "A: " << std::stod(ReadValue("A:", configPath)) << ",\n\t";
             buf << "alpha: " << std::stod(ReadValue("alpha:", configPath)) << ",\n\t";
             buf << "E_Piv: " << std::stod(ReadValue("E_Piv:", configPath)) << "\n";
-        } else if (fluxType == "COMP") {
-            buf << "A: " << std::stod(ReadValue("A:", configPath)) << ",\n\t";
-            buf << "alpha: " << std::stod(ReadValue("alpha:", configPath)) << ",\n\t";
-            buf << "E_Piv: " << std::stod(ReadValue("E_Piv:", configPath)) << ",\n\t";
-            buf << "E_Peak: " << std::stod(ReadValue("E_Peak:", configPath)) << "\n";
-        } else if (fluxType == "SEP") {
-            buf << "year: " << std::stoi(ReadValue("year:", configPath)) << ",\n\t";
-            buf << "order: " << std::stoi(ReadValue("order:", configPath)) << "\n";
-        } else if (fluxType == "Galactic") {
-            buf << "phiMV: " << std::stod(ReadValue("phiMV:", configPath)) << ",\n\t";
-            buf << "particle: " << ReadValue("particle:", configPath) << "\n";
         } else if (fluxType == "Table") {
             buf << "table_path: " << ReadValue("table_path:", configPath) << ",\n\t";
             buf << "particle: " << ReadValue("particle:", configPath) << "\n";
@@ -187,9 +155,7 @@ namespace {
         buf << "Particles: [";
         if (fluxType == "PLAW") {
             buf << "gamma";
-        } else if (fluxType == "SEP") {
-            buf << "proton";
-        } else if (fluxType == "Galactic" || fluxType == "Table") {
+        } else if (fluxType == "Table") {
             buf << ReadValue("particle:", configPath);
         } else if (fluxType == "Uniform") {
             buf << ReadValue("particles:", configPath);
@@ -197,11 +163,9 @@ namespace {
         buf << "]\n";
 
         buf << "Energies:\n{\n\t";
-        if (fluxType == "PLAW" || fluxType == "COMP") {
+        if (fluxType == "PLAW") {
             buf << "gamma: ";
-        } else if (fluxType == "SEP") {
-            buf << "proton: ";
-        } else if (fluxType == "Galactic" || fluxType == "Table") {
+        } else if (fluxType == "Table") {
             buf << ReadValue("particle:", configPath) << ": ";
         } else if (fluxType == "Uniform") {
             std::vector<G4String> particles = Split(ReadValue("particles:", configPath));
@@ -291,11 +255,7 @@ namespace {
         };
 
         std::string filename = "info_" + detectorType + "_" + fluxType;
-        if (fluxType == "Galactic") {
-            const std::string part = ReadValue("particle:", configPath);
-            const std::string phi = ReadValue("phiMV:", configPath);
-            filename += "_particle:" + part + "_phiMV:" + phi + ".txt";
-        } else if (fluxType == "Uniform") {
+        if (fluxType == "Uniform") {
             const std::string part = ReadValue("particles:", configPath);
             filename += "_particle:" + part + ".txt";
         } else {

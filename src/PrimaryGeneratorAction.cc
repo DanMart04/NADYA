@@ -23,10 +23,10 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String& fl
                         ".\nAvailable flux directions: isotropic, isotropic_up, isotropic_down, vertical_up," +
                         " vertical_down, horizontal").c_str());
     }
-    std::vector<G4String> fluxTypeList = {"Uniform", "PLAW", "COMP", "SEP", "Galactic", "Table"};
+    std::vector<G4String> fluxTypeList = {"Uniform", "PLAW", "Table"};
     if (std::find(fluxTypeList.begin(), fluxTypeList.end(), fluxType) == fluxTypeList.end()) {
         G4Exception("PrimaryGeneratorAction::GeneratePrimaries", "FluxType", FatalException,
-                    ("Flux type not found: " + fluxType + ".\nAvailable flux types: Uniform, PLAW, SEP, Galactic")
+                    ("Flux type not found: " + fluxType + ".\nAvailable flux types: Uniform, PLAW, Table")
                     .
                     c_str());
     }
@@ -35,12 +35,6 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(G4String fDir, const G4String& fl
         flux = new UniformFlux(eCrystalThreshold);
     } else if (fluxType == "PLAW") {
         flux = new PLAWFlux(eCrystalThreshold);
-    } else if (fluxType == "COMP") {
-        flux = new COMPFlux(eCrystalThreshold);
-    } else if (fluxType == "SEP") {
-        flux = new SEPFlux(eCrystalThreshold);
-    } else if (fluxType == "Galactic") {
-        flux = new GalacticFlux(eCrystalThreshold);
     } else if (fluxType == "Table") {
         flux = new TableFlux(eCrystalThreshold);
     }

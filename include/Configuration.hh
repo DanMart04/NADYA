@@ -5,6 +5,8 @@
 #include <G4Types.hh>
 #include <G4SystemOfUnits.hh>
 
+enum class FluxType { PLAW, COMP, SEP, UNIFORM, GALACTIC, TABLE };
+enum class FluxDir { Vertical_down, Vertical_up, Horizontal, Isotropic_up, Isotropic_down, Isotropic };
 
 namespace Configuration
 {

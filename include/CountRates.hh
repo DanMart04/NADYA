@@ -10,8 +10,9 @@
 #include <sstream>
 #include <limits>
 #include <algorithm>
+#include "Configuration.hh"
 
-enum class FluxType { PLAW, COMP, SEP, UNIFORM, GALACTIC, TABLE };
+// enum class FluxType { PLAW, COMP, SEP, UNIFORM, GALACTIC, TABLE };
 
 struct EnergyRange {
     double Emin;
@@ -66,7 +67,7 @@ double fluxGalactic(double E);
 
 double J_proton(double E_GeV);
 
-enum class FluxDir { Vertical_down, Vertical_up, Horizontal, Isotropic_up, Isotropic_down, Isotropic };
+// enum class FluxDir { Vertical_down, Vertical_up, Horizontal, Isotropic_up, Isotropic_down, Isotropic };
 
 /** Area in cm^2 for a rectangular envelope: halfX_mm, halfY_mm (half extents), sizeZ_mm (full height). */
 double AreaRect_cm2(double halfX_mm, double halfY_mm, double sizeZ_mm, FluxDir dir);

@@ -15,8 +15,11 @@
 #include <Randomize.hh>
 
 #include "Flux/Flux.hh"
-#include "Flux/SEPFlux.hh"
 
+struct Row {
+    double E_MeV;
+    double flux;
+};
 
 class TableFlux : public Flux {
 public:

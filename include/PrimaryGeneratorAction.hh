@@ -24,11 +24,7 @@
 #include "Flux/Flux.hh"
 #include "Flux/UniformFlux.hh"
 #include "Flux/PLAWFlux.hh"
-#include "Flux/COMPFlux.hh"
-#include "Flux/SEPFlux.hh"
 #include "Flux/TableFlux.hh"
-#include "Flux/GalacticFlux.hh"
-
 
 class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction {
 public:
